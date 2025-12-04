@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Calendar, MapPin, Clock, Share2, ShieldCheck, AlertCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState } from "react";
-import { toast } from "sonner"; // We might need to install sonner or use a simple alert for now
+
 
 // Mock Data Store - In a real app, this would be an API call
 const EVENTS_DATA: Record<string, any> = {
