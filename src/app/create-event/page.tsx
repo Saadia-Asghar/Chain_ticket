@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { useWriteContract, useWaitForTransactionReceipt, useAccount } from "wagmi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { parseEther } from "viem";
 import { motion } from "framer-motion";
 import { Calendar, Clock, DollarSign, Users, ArrowRight, CheckCircle2 } from "lucide-react";
+import { WalletModal } from "@/components/WalletModal";
 
 const ChainTicketPlusABI = [
     {
@@ -29,6 +30,8 @@ const ChainTicketPlusABI = [
 const CONTRACT_ADDRESS = "0x0000000000000000000000000000000000000000"; // Placeholder
 
 export default function CreateEventPage() {
+    const { isConnected } = useAccount();
+    const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
     const [formData, setFormData] = useState({
         name: "",
         price: "",
@@ -49,6 +52,12 @@ export default function CreateEventPage() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Check if wallet is connected
+        if (!isConnected && CONTRACT_ADDRESS !== "0x0000000000000000000000000000000000000000") {
+            setIsWalletModalOpen(true);
+            return;
+        }
 
         // If contract address is placeholder, simulate success for UI demo
         if (CONTRACT_ADDRESS === "0x0000000000000000000000000000000000000000") {
@@ -253,6 +262,12 @@ export default function CreateEventPage() {
                 </div>
             </motion.div>
 
+        </div>
+
+            <WalletModal
+                isOpen={isWalletModalOpen}
+                onClose={() => setIsWalletModalOpen(false)}
+            />
         </div>
     );
 }

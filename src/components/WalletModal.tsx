@@ -28,8 +28,22 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
 
     const handleConnect = (connector: Connector) => {
         connect({ connector }, {
-            onSuccess: () => onClose(),
-            onError: (err) => alert(err.message)
+            onSuccess: () => {
+                onClose();
+            },
+            onError: (err: Error) => {
+                console.error("Wallet connection error:", err);
+                // Show more user-friendly error messages
+                let errorMessage = err.message;
+                if (err.message.includes("User rejected")) {
+                    errorMessage = "Connection cancelled. Please try again.";
+                } else if (err.message.includes("not installed")) {
+                    errorMessage = "Wallet not detected. Please install the wallet extension.";
+                } else if (err.message.includes("network")) {
+                    errorMessage = "Network error. Please check your connection and try again.";
+                }
+                alert(errorMessage);
+            }
         });
     };
 

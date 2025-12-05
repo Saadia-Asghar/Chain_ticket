@@ -2,10 +2,13 @@
 
 import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Calendar, MapPin, Clock, Share2, ShieldCheck, AlertCircle } from "lucide-react";
+import { Calendar, MapPin, Clock, Share2, ShieldCheck, AlertCircle, CheckCircle2, XCircle, ExternalLink } from "lucide-react";
 import { motion } from "framer-motion";
-import { useState } from "react";
-
+import { useState, useEffect } from "react";
+import { useWriteContract, useWaitForTransactionReceipt, useAccount } from 'wagmi';
+import { parseEther } from 'viem';
+import { CONTRACT_ABI, CONTRACT_ADDRESS } from "@/utils/contract";
+import { WalletModal } from "@/components/WalletModal";
 
 // Mock Data Store - In a real app, this would be an API call
 const EVENTS_DATA: Record<string, any> = {
@@ -16,7 +19,7 @@ const EVENTS_DATA: Record<string, any> = {
         date: "Dec 15, 2025",
         time: "09:00 AM - 06:00 PM",
         location: "LUMS, Lahore",
-        price: "0.01 ETH",
+        price: "0.01", // Changed to number string for parsing
         supply: 500,
         minted: 124,
         organizer: "Base Pakistan Community",
@@ -31,7 +34,7 @@ const EVENTS_DATA: Record<string, any> = {
         date: "Jan 20, 2026",
         time: "10:00 AM - 05:00 PM",
         location: "NUST, Islamabad",
-        price: "0.05 ETH",
+        price: "0.05",
         supply: 1000,
         minted: 850,
         organizer: "Web3 Islamabad",
@@ -46,7 +49,7 @@ const EVENTS_DATA: Record<string, any> = {
         date: "Feb 14, 2026",
         time: "07:00 PM - 12:00 AM",
         location: "Arts Council, Karachi",
-        price: "0.02 ETH",
+        price: "0.02",
         supply: 200,
         minted: 45,
         organizer: "Karachi Arts Society",
@@ -60,21 +63,66 @@ export default function EventDetailsPage() {
     const params = useParams();
     const id = params.id as string;
     const event = EVENTS_DATA[id];
-    const [isMinting, setIsMinting] = useState(false);
+    const { isConnected } = useAccount();
+    const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+    const { data: hash, isPending, writeContract, error: writeError, reset } = useWriteContract();
+
+    const { isLoading: isConfirming, isSuccess: isConfirmed, error: txError } = useWaitForTransactionReceipt({
+        hash,
+    });
+
+    const handleMint = async () => {
+        if (!event) return;
+
+        // Check if wallet is connected
+        if (!isConnected) {
+            setIsWalletModalOpen(true);
+            return;
+        }
+
+        setError(null);
+        setSuccessMessage(null);
+        reset();
+
+        try {
+            writeContract({
+                address: CONTRACT_ADDRESS,
+                abi: CONTRACT_ABI,
+                functionName: 'mintTicket',
+                args: [BigInt(event.id), "ipfs://mock-uri"],
+                value: parseEther(event.price),
+            });
+        } catch (error: any) {
+            console.error("Minting failed:", error);
+            setError(error?.message || "Transaction failed. Please try again.");
+        }
+    };
+
+    // Handle transaction errors
+    useEffect(() => {
+        if (writeError) {
+            setError(writeError.message || "Transaction failed. Please check your wallet and try again.");
+        }
+        if (txError) {
+            setError(txError.message || "Transaction confirmation failed.");
+        }
+    }, [writeError, txError]);
 
     const handleShare = () => {
         navigator.clipboard.writeText(window.location.href);
         alert("Link copied to clipboard!");
     };
 
-    const handleMint = () => {
-        setIsMinting(true);
-        // Simulate minting delay
-        setTimeout(() => {
-            setIsMinting(false);
-            alert("Ticket Minted Successfully! (Simulation)");
-        }, 2000);
-    };
+    useEffect(() => {
+        if (isConfirmed && hash) {
+            setSuccessMessage("Ticket minted successfully!");
+            setError(null);
+            // Optionally redirect or refresh data here
+        }
+    }, [isConfirmed, hash]);
 
     if (!event) {
         return (
@@ -194,16 +242,70 @@ export default function EventDetailsPage() {
                                 </div>
                             </div>
 
+                            {!isConnected && (
+                                <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-sm text-amber-600 dark:text-amber-400">
+                                    Please connect your wallet to mint tickets
+                                </div>
+                            )}
+
+                            {error && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: -10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="mb-4 p-4 bg-destructive/10 border border-destructive/20 rounded-lg"
+                                >
+                                    <div className="flex items-start gap-2">
+                                        <XCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+                                        <div className="flex-1">
+                                            <p className="text-sm font-medium text-destructive">Transaction Failed</p>
+                                            <p className="text-xs text-destructive/80 mt-1">{error}</p>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            )}
+
+                            {successMessage && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: -10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="mb-4 p-4 bg-green-500/10 border border-green-500/20 rounded-lg"
+                                >
+                                    <div className="flex items-start gap-2">
+                                        <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                                        <div className="flex-1">
+                                            <p className="text-sm font-medium text-green-600 dark:text-green-400">{successMessage}</p>
+                                            {hash && (
+                                                <a
+                                                    href={`https://sepolia.basescan.org/tx/${hash}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="text-xs text-green-600 dark:text-green-400 hover:underline flex items-center gap-1 mt-1"
+                                                >
+                                                    View on BaseScan <ExternalLink className="w-3 h-3" />
+                                                </a>
+                                            )}
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            )}
+
                             <Button
                                 className="w-full h-14 text-lg font-bold mb-6 rounded-xl shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all"
                                 onClick={handleMint}
-                                disabled={isMinting}
+                                disabled={isPending || isConfirming || !isConnected}
                             >
-                                {isMinting ? (
+                                {isPending ? (
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                        Confirm in Wallet...
+                                    </div>
+                                ) : isConfirming ? (
                                     <div className="flex items-center gap-2">
                                         <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                                         Minting...
                                     </div>
+                                ) : !isConnected ? (
+                                    "Connect Wallet to Mint"
                                 ) : (
                                     "Mint Ticket Now"
                                 )}
@@ -217,6 +319,11 @@ export default function EventDetailsPage() {
                     </motion.div>
                 </div>
             </div>
+
+            <WalletModal
+                isOpen={isWalletModalOpen}
+                onClose={() => setIsWalletModalOpen(false)}
+            />
         </div>
     );
 }
