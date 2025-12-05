@@ -36,12 +36,15 @@ export function Navbar() {
                     <Link href="/my-tickets" className="text-sm font-medium hover:text-primary transition-colors hidden md:block">
                         My Tickets
                     </Link>
+                    <Link href="/organizer" className="text-sm font-medium hover:text-primary transition-colors hidden md:block">
+                        Organizer
+                    </Link>
 
                     {isConnected ? (
                         <div className="flex items-center gap-2 bg-secondary/50 pl-3 pr-1 py-1 rounded-full border">
-                            <span className="text-xs font-mono text-muted-foreground">
+                            <Link href="/profile" className="text-xs font-mono text-muted-foreground hover:text-primary transition-colors">
                                 {address?.slice(0, 6)}...{address?.slice(-4)}
-                            </span>
+                            </Link>
                             <Button variant="ghost" size="sm" className="h-7 rounded-full px-3 hover:bg-destructive/10 hover:text-destructive" onClick={() => disconnect()}>
                                 Disconnect
                             </Button>

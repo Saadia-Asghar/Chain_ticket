@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Calendar, MapPin, Clock, Share2, ShieldCheck, AlertCircle, CheckCircle2, XCircle, ExternalLink } from "lucide-react";
@@ -11,58 +12,12 @@ import { CONTRACT_ABI, CONTRACT_ADDRESS } from "@/utils/contract";
 import { WalletModal } from "@/components/WalletModal";
 
 // Mock Data Store - In a real app, this would be an API call
-const EVENTS_DATA: Record<string, any> = {
-    "1": {
-        id: "1",
-        name: "Base Hackathon Pakistan",
-        description: "Join the biggest Web3 hackathon in Pakistan. Build on Base, win prizes, and network with industry leaders. This event focuses on decentralized social, DeFi, and consumer apps. Expect 48 hours of non-stop coding, mentorship sessions, and free food!",
-        date: "Dec 15, 2025",
-        time: "09:00 AM - 06:00 PM",
-        location: "LUMS, Lahore",
-        price: "0.01", // Changed to number string for parsing
-        supply: 500,
-        minted: 124,
-        organizer: "Base Pakistan Community",
-        organizerAddress: "0x123...abc",
-        image: "bg-gradient-to-br from-blue-600 to-purple-600",
-        category: "Hackathon"
-    },
-    "2": {
-        id: "2",
-        name: "Web3 Summit 2025",
-        description: "The premier Web3 conference in Islamabad. Featuring keynote speakers from top global protocols, panel discussions on the future of crypto regulation in Pakistan, and exclusive networking opportunities.",
-        date: "Jan 20, 2026",
-        time: "10:00 AM - 05:00 PM",
-        location: "NUST, Islamabad",
-        price: "0.05",
-        supply: 1000,
-        minted: 850,
-        organizer: "Web3 Islamabad",
-        organizerAddress: "0x456...def",
-        image: "bg-gradient-to-br from-indigo-500 to-blue-500",
-        category: "Conference"
-    },
-    "3": {
-        id: "3",
-        name: "Sufi Night & Arts Festival",
-        description: "An evening of soulful Sufi music and digital art exhibitions. Experience the blend of tradition and technology as we auction exclusive NFT art pieces during the concert.",
-        date: "Feb 14, 2026",
-        time: "07:00 PM - 12:00 AM",
-        location: "Arts Council, Karachi",
-        price: "0.02",
-        supply: 200,
-        minted: 45,
-        organizer: "Karachi Arts Society",
-        organizerAddress: "0x789...ghi",
-        image: "bg-gradient-to-br from-pink-600 to-rose-500",
-        category: "Music & Arts"
-    }
-};
+import { EVENTS_DATA } from "@/data/mockData";
 
 export default function EventDetailsPage() {
     const params = useParams();
     const id = params.id as string;
-    const event = EVENTS_DATA[id];
+    const event = EVENTS_DATA.find(e => e.id === id);
     const { isConnected } = useAccount();
     const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -317,6 +272,41 @@ export default function EventDetailsPage() {
                             </div>
                         </div>
                     </motion.div>
+                </div>
+
+                {/* Similar Events Section */}
+                <div className="container mx-auto px-4 pb-20">
+                    <h2 className="text-2xl font-bold mb-8">Similar Events You Might Like</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        {EVENTS_DATA
+                            .filter(e => e.category === event.category && e.id !== event.id)
+                            .slice(0, 3)
+                            .map((similarEvent) => (
+                                <Link href={`/events/${similarEvent.id}`} key={similarEvent.id}>
+                                    <motion.div
+                                        whileHover={{ y: -5 }}
+                                        className="bg-card border rounded-2xl overflow-hidden hover:shadow-xl transition-all h-full flex flex-col"
+                                    >
+                                        <div className={`h-40 ${similarEvent.image} bg-cover bg-center`} />
+                                        <div className="p-5 flex flex-col flex-grow">
+                                            <h3 className="font-bold text-lg mb-2 line-clamp-1">{similarEvent.name}</h3>
+                                            <div className="space-y-2 text-sm text-muted-foreground mb-4 flex-grow">
+                                                <div className="flex items-center gap-2">
+                                                    <Calendar className="w-4 h-4" /> {similarEvent.date}
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <MapPin className="w-4 h-4" /> {similarEvent.city}, {similarEvent.country}
+                                                </div>
+                                            </div>
+                                            <div className="pt-4 border-t flex justify-between items-center mt-auto">
+                                                <span className="font-bold text-primary">{similarEvent.price} ETH</span>
+                                                <span className="text-xs bg-secondary px-2 py-1 rounded">{similarEvent.category}</span>
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                </Link>
+                            ))}
+                    </div>
                 </div>
             </div>
 

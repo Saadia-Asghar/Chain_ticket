@@ -5,6 +5,8 @@ import { useReadContract, useWriteContract } from "wagmi";
 import { Button } from "@/components/ui/button";
 import { useParams } from "next/navigation";
 
+import { CONTRACT_ADDRESS } from "@/utils/contract";
+
 const ChainTicketPlusABI = [
     {
         "inputs": [{ "internalType": "uint256", "name": "_tokenId", "type": "uint256" }],
@@ -29,7 +31,7 @@ const ChainTicketPlusABI = [
     }
 ] as const;
 
-const CONTRACT_ADDRESS = "0x0000000000000000000000000000000000000000";
+
 
 export default function VerifyPage() {
     const params = useParams();

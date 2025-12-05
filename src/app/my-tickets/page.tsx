@@ -5,26 +5,21 @@ import { motion } from "framer-motion";
 import { QrCode, Calendar, MapPin, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-// Mock data for user's tickets
+import { EVENTS_DATA } from "@/data/mockData";
+
 const MY_TICKETS = [
     {
-        id: "1",
+        id: "101",
         eventId: "1",
-        eventName: "Base Hackathon Pakistan",
-        date: "Dec 15, 2025",
-        location: "LUMS, Lahore",
-        image: "bg-gradient-to-br from-blue-600 to-purple-600",
-        qrCode: "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=chainticket-verify-1",
+        ...EVENTS_DATA.find(e => e.id === "1"),
+        qrCode: `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent('http://localhost:3000/verify/101')}`,
         status: "Valid"
     },
     {
-        id: "2",
+        id: "102",
         eventId: "2",
-        eventName: "Web3 Summit 2025",
-        date: "Jan 20, 2026",
-        location: "NUST, Islamabad",
-        image: "bg-gradient-to-br from-indigo-500 to-blue-500",
-        qrCode: "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=chainticket-verify-2",
+        ...EVENTS_DATA.find(e => e.id === "2"),
+        qrCode: `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent('http://localhost:3000/verify/102')}`,
         status: "Used"
     }
 ];
@@ -77,7 +72,7 @@ function TicketFlipCard({ ticket, index }: { ticket: any, index: number }) {
                             <div className="bg-white/20 backdrop-blur-md self-start px-3 py-1 rounded-full text-white text-xs font-bold border border-white/20">
                                 Ticket #{ticket.id.padStart(3, '0')}
                             </div>
-                            <h3 className="text-2xl font-bold text-white">{ticket.eventName}</h3>
+                            <h3 className="text-2xl font-bold text-white">{ticket.name}</h3>
                         </div>
 
                         <div className="p-6 flex-grow flex flex-col justify-between">
