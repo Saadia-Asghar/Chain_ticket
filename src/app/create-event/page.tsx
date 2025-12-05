@@ -32,6 +32,7 @@ const CONTRACT_ADDRESS = "0x0000000000000000000000000000000000000000"; // Placeh
 export default function CreateEventPage() {
     const { isConnected } = useAccount();
     const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
+    const [contractAddress, setContractAddress] = useState(CONTRACT_ADDRESS);
     const [formData, setFormData] = useState({
         name: "",
         price: "",
@@ -46,26 +47,18 @@ export default function CreateEventPage() {
         hash,
     });
 
-    // Simulation state for demo purposes
-    const [isSimulating, setIsSimulating] = useState(false);
-    const [simulationSuccess, setSimulationSuccess] = useState(false);
-
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
         // Check if wallet is connected
-        if (!isConnected && CONTRACT_ADDRESS !== "0x0000000000000000000000000000000000000000") {
+        if (!isConnected) {
             setIsWalletModalOpen(true);
             return;
         }
 
-        // If contract address is placeholder, simulate success for UI demo
-        if (CONTRACT_ADDRESS === "0x0000000000000000000000000000000000000000") {
-            setIsSimulating(true);
-            setTimeout(() => {
-                setIsSimulating(false);
-                setSimulationSuccess(true);
-            }, 2000);
+        // Validate contract address
+        if (!contractAddress || contractAddress === "0x0000000000000000000000000000000000000000") {
+            alert("Please enter a valid contract address.");
             return;
         }
 
@@ -73,7 +66,7 @@ export default function CreateEventPage() {
         const endTimestamp = Math.floor(new Date(formData.end).getTime() / 1000);
 
         writeContract({
-            address: CONTRACT_ADDRESS,
+            address: contractAddress as `0x${string}`,
             abi: ChainTicketPlusABI,
             functionName: "createEvent",
             args: [
@@ -103,6 +96,23 @@ export default function CreateEventPage() {
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-6 bg-card border rounded-3xl p-8 shadow-sm">
+                    {CONTRACT_ADDRESS === "0x0000000000000000000000000000000000000000" && (
+                        <div className="space-y-2 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">
+                            <Label htmlFor="contractAddress" className="text-base text-yellow-600">Contract Address</Label>
+                            <Input
+                                id="contractAddress"
+                                placeholder="0x..."
+                                required
+                                className="h-12 rounded-xl"
+                                value={contractAddress}
+                                onChange={(e) => setContractAddress(e.target.value)}
+                            />
+                            <p className="text-xs text-muted-foreground">
+                                Enter the deployed ChainTicketPlus contract address to enable real transactions.
+                            </p>
+                        </div>
+                    )}
+
                     <div className="space-y-2">
                         <Label htmlFor="name" className="text-base">Event Name</Label>
                         <Input
@@ -193,11 +203,11 @@ export default function CreateEventPage() {
                         <p className="text-xs text-muted-foreground">Set to 0 to make tickets non-transferable (Soulbound).</p>
                     </div>
 
-                    <Button type="submit" className="w-full h-14 text-lg rounded-xl mt-4" disabled={isPending || isConfirming || isSimulating}>
-                        {isPending || isSimulating ? "Creating Event..." : isConfirming ? "Confirming..." : "Create Event"} <ArrowRight className="ml-2 w-5 h-5" />
+                    <Button type="submit" className="w-full h-14 text-lg rounded-xl mt-4" disabled={isPending || isConfirming}>
+                        {isPending ? "Creating Event..." : isConfirming ? "Confirming..." : "Create Event"} <ArrowRight className="ml-2 w-5 h-5" />
                     </Button>
 
-                    {(isSuccess || simulationSuccess) && (
+                    {isSuccess && (
                         <motion.div
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -261,8 +271,6 @@ export default function CreateEventPage() {
                     </div>
                 </div>
             </motion.div>
-
-        </div>
 
             <WalletModal
                 isOpen={isWalletModalOpen}
