@@ -9,6 +9,9 @@ import { parseEther } from "viem";
 import { motion } from "framer-motion";
 import { Calendar, Clock, DollarSign, Users, ArrowRight, CheckCircle2 } from "lucide-react";
 import { WalletModal } from "@/components/WalletModal";
+import { useRouter } from "next/navigation";
+import { saveEvent, Event } from "@/services/storage";
+import { useMockAccount } from "@/hooks/useMockAccount";
 
 const ChainTicketPlusABI = [
     {
@@ -30,7 +33,8 @@ const ChainTicketPlusABI = [
 const CONTRACT_ADDRESS = "0x0000000000000000000000000000000000000000"; // Placeholder
 
 export default function CreateEventPage() {
-    const { isConnected } = useAccount();
+    const router = useRouter();
+    const { isConnected } = useMockAccount();
     const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
     const [contractAddress, setContractAddress] = useState(CONTRACT_ADDRESS);
     const [formData, setFormData] = useState({
@@ -53,6 +57,37 @@ export default function CreateEventPage() {
         // Check if wallet is connected
         if (!isConnected) {
             setIsWalletModalOpen(true);
+            return;
+        }
+
+        // For demo purposes, we'll save to local storage even if contract interaction is mocked/fails
+        // In a real app, this would happen after successful transaction confirmation
+
+        const newEvent: Event = {
+            id: Date.now().toString(),
+            name: formData.name,
+            description: "Event description placeholder", // Add description field to form if needed
+            date: new Date(formData.start).toLocaleDateString(),
+            time: new Date(formData.start).toLocaleTimeString(),
+            location: "TBD", // Add location field to form
+            city: "Online", // Add city field
+            country: "Global", // Add country field
+            price: formData.price,
+            supply: parseInt(formData.supply),
+            minted: 0,
+            organizer: "You", // Get from profile or wallet
+            organizerAddress: "0x...", // Get from wallet
+            image: "bg-gradient-to-br from-blue-600 to-purple-600", // Default or upload
+            category: "Conference" // Add category selector
+        };
+
+        saveEvent(newEvent);
+
+        // Simulate contract write for now if address is placeholder
+        if (contractAddress === "0x0000000000000000000000000000000000000000") {
+            setTimeout(() => {
+                router.push("/organizer");
+            }, 1000);
             return;
         }
 

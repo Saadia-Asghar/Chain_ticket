@@ -1,22 +1,58 @@
 "use client";
 
 import { useAccount } from "wagmi";
-import { EVENTS_DATA } from "@/data/mockData";
 import { motion } from "framer-motion";
-import { Calendar, DollarSign, Users, TrendingUp, Plus } from "lucide-react";
+import { Calendar, DollarSign, Users, TrendingUp, Plus, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { useState, useEffect } from "react";
+import { getEvents, Event } from "@/services/storage";
+import { useMockAccount } from "@/hooks/useMockAccount";
 
 export default function OrganizerDashboard() {
-    const { address, isConnected } = useAccount();
+    const { address, isConnected } = useMockAccount();
+    const [events, setEvents] = useState<Event[]>([]);
+
+    useEffect(() => {
+        setEvents(getEvents());
+    }, []);
 
     // In a real app, we would filter by the connected wallet address
     // For demo purposes, we'll show events if connected, or a specific set if we match the mock data addresses
-    const myEvents = isConnected ? EVENTS_DATA : [];
+    const myEvents = isConnected ? events : [];
 
     const totalRevenue = myEvents.reduce((acc, event) => acc + (parseFloat(event.price) * event.minted), 0);
     const totalTicketsSold = myEvents.reduce((acc, event) => acc + event.minted, 0);
     const totalEvents = myEvents.length;
+
+    const handleDownloadAttendees = (event: any) => {
+        // Generate mock attendee data
+        const attendees = Array.from({ length: event.minted }, (_, i) => ({
+            ticketId: i + 1,
+            walletAddress: `0x${Math.random().toString(16).slice(2, 42).padEnd(40, '0')}`,
+            purchaseDate: new Date(Date.now() - Math.random() * 10000000000).toISOString(),
+            price: event.price,
+            status: Math.random() > 0.8 ? "Used" : "Valid"
+        }));
+
+        // Convert to CSV
+        const headers = ["Ticket ID", "Wallet Address", "Purchase Date", "Price (ETH)", "Status"];
+        const csvContent = [
+            headers.join(","),
+            ...attendees.map(a => [a.ticketId, a.walletAddress, a.purchaseDate, a.price, a.status].join(","))
+        ].join("\n");
+
+        // Create and trigger download
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", `${event.name.replace(/\s+/g, '_')}_attendees.csv`);
+        link.style.visibility = "hidden";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
 
     if (!isConnected) {
         return (
@@ -101,6 +137,13 @@ export default function OrganizerDashboard() {
                         </div>
 
                         <div className="flex gap-2">
+                            <Button
+                                variant="outline"
+                                onClick={() => handleDownloadAttendees(event)}
+                                title="Download Attendee Data"
+                            >
+                                <Download className="w-4 h-4 mr-2" /> Data
+                            </Button>
                             <Link href={`/events/${event.id}`}>
                                 <Button variant="outline">View</Button>
                             </Link>

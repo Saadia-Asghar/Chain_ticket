@@ -8,29 +8,37 @@ import { useUserPreferences } from "@/context/UserPreferencesContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, MapPin, Calendar, Ticket, ChevronLeft, ChevronRight, Star, Filter } from "lucide-react";
 import { EVENTS_DATA } from "@/data/mockData";
+import { initializeEvents, getEvents, Event } from "@/services/storage";
 
 export default function EventsPage() {
     const { interests, location } = useUserPreferences();
+    const [events, setEvents] = useState<Event[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
+
+    useEffect(() => {
+        initializeEvents(EVENTS_DATA);
+        setEvents(getEvents());
+    }, []);
     const [selectedCategory, setSelectedCategory] = useState("All");
     const [cityFilter, setCityFilter] = useState("");
     const [countryFilter, setCountryFilter] = useState("");
     const [featuredIndex, setFeaturedIndex] = useState(0);
 
-    const categories = ["All", "Hackathon", "Conference", "Music & Arts", "DeFi", "NFTs", "Gaming", "DAO", "Workshop"];
+    const categories = ["All", "Hackathon", "Conference", "Music & Arts", "DeFi", "NFTs", "Gaming", "DAO", "Workshop", "Networking"];
 
     // Featured Events (randomly select 3 for demo)
-    const featuredEvents = [EVENTS_DATA[0], EVENTS_DATA[4], EVENTS_DATA[3]];
+    const featuredEvents = events.length > 0 ? [events[0], events[4 % events.length], events[3 % events.length]] : [];
 
     useEffect(() => {
+        if (featuredEvents.length === 0) return;
         const timer = setInterval(() => {
             setFeaturedIndex((prev) => (prev + 1) % featuredEvents.length);
         }, 5000);
         return () => clearInterval(timer);
-    }, []);
+    }, [featuredEvents.length]);
 
     // Enhanced Recommendation Logic
-    const recommendedEvents = EVENTS_DATA.map(event => {
+    const recommendedEvents = events.map(event => {
         let score = 0;
         if (interests.includes(event.category)) score += 2;
         if (location && event.city === location.city) score += 3;
@@ -41,7 +49,7 @@ export default function EventsPage() {
         .sort((a, b) => b.score - a.score)
         .slice(0, 3); // Top 3 recommendations
 
-    const filteredEvents = EVENTS_DATA.filter(event => {
+    const filteredEvents = events.filter(event => {
         const matchesSearch = event.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             event.location.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesCategory = selectedCategory === "All" || event.category === selectedCategory;
@@ -56,80 +64,86 @@ export default function EventsPage() {
 
             {/* Featured Carousel */}
             <section className="relative h-[500px] rounded-3xl overflow-hidden shadow-2xl">
-                <AnimatePresence mode="wait">
-                    <motion.div
-                        key={featuredIndex}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.5 }}
-                        className={`absolute inset-0 ${featuredEvents[featuredIndex].image} bg-cover bg-center`}
-                    >
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
-                        <div className="absolute bottom-0 left-0 p-8 md:p-16 w-full md:w-2/3 space-y-4">
-                            <span className="px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-white text-sm font-bold border border-white/20">
-                                Featured Event
-                            </span>
-                            <h2 className="text-4xl md:text-6xl font-bold text-white leading-tight">
-                                {featuredEvents[featuredIndex].name}
-                            </h2>
-                            <p className="text-lg text-white/80 line-clamp-2">
-                                {featuredEvents[featuredIndex].description}
-                            </p>
-                            <div className="flex items-center gap-6 text-white/90 pt-4">
-                                <span className="flex items-center gap-2"><Calendar className="w-5 h-5" /> {featuredEvents[featuredIndex].date}</span>
-                                <span className="flex items-center gap-2"><MapPin className="w-5 h-5" /> {featuredEvents[featuredIndex].city}, {featuredEvents[featuredIndex].country}</span>
+                {featuredEvents.length > 0 && (
+                    <AnimatePresence mode="wait">
+                        <motion.div
+                            key={featuredIndex}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.5 }}
+                            className={`absolute inset-0 ${featuredEvents[featuredIndex].image} bg-cover bg-center`}
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
+                            <div className="absolute bottom-0 left-0 p-8 md:p-16 w-full md:w-2/3 space-y-4">
+                                <span className="px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-white text-sm font-bold border border-white/20">
+                                    Featured Event
+                                </span>
+                                <h2 className="text-4xl md:text-6xl font-bold text-white leading-tight">
+                                    {featuredEvents[featuredIndex].name}
+                                </h2>
+                                <p className="text-lg text-white/80 line-clamp-2">
+                                    {featuredEvents[featuredIndex].description}
+                                </p>
+                                <div className="flex items-center gap-6 text-white/90 pt-4">
+                                    <span className="flex items-center gap-2"><Calendar className="w-5 h-5" /> {featuredEvents[featuredIndex].date}</span>
+                                    <span className="flex items-center gap-2"><MapPin className="w-5 h-5" /> {featuredEvents[featuredIndex].city}, {featuredEvents[featuredIndex].country}</span>
+                                </div>
+                                <div className="pt-6">
+                                    <Link href={`/events/${featuredEvents[featuredIndex].id}`}>
+                                        <Button size="lg" className="rounded-xl text-lg px-8 shadow-lg shadow-primary/25">
+                                            Get Tickets
+                                        </Button>
+                                    </Link>
+                                </div>
                             </div>
-                            <div className="pt-6">
-                                <Link href={`/events/${featuredEvents[featuredIndex].id}`}>
-                                    <Button size="lg" className="rounded-xl text-lg px-8 shadow-lg shadow-primary/25">
-                                        Get Tickets
-                                    </Button>
-                                </Link>
-                            </div>
-                        </div>
-                    </motion.div>
-                </AnimatePresence>
+                        </motion.div>
+                    </AnimatePresence>
+                )}
 
-                <div className="absolute bottom-8 right-8 flex gap-2 z-10">
-                    <Button
-                        variant="outline"
-                        size="icon"
-                        className="rounded-full bg-black/20 border-white/20 text-white hover:bg-white/20 backdrop-blur-sm"
-                        onClick={() => setFeaturedIndex((prev) => (prev - 1 + featuredEvents.length) % featuredEvents.length)}
-                    >
-                        <ChevronLeft className="w-5 h-5" />
-                    </Button>
-                    <Button
-                        variant="outline"
-                        size="icon"
-                        className="rounded-full bg-black/20 border-white/20 text-white hover:bg-white/20 backdrop-blur-sm"
-                        onClick={() => setFeaturedIndex((prev) => (prev + 1) % featuredEvents.length)}
-                    >
-                        <ChevronRight className="w-5 h-5" />
-                    </Button>
-                </div>
+                {featuredEvents.length > 0 && (
+                    <div className="absolute bottom-8 right-8 flex gap-2 z-10">
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            className="rounded-full bg-black/20 border-white/20 text-white hover:bg-white/20 backdrop-blur-sm"
+                            onClick={() => setFeaturedIndex((prev) => (prev - 1 + featuredEvents.length) % featuredEvents.length)}
+                        >
+                            <ChevronLeft className="w-5 h-5" />
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            className="rounded-full bg-black/20 border-white/20 text-white hover:bg-white/20 backdrop-blur-sm"
+                            onClick={() => setFeaturedIndex((prev) => (prev + 1) % featuredEvents.length)}
+                        >
+                            <ChevronRight className="w-5 h-5" />
+                        </Button>
+                    </div>
+                )}
             </section>
 
             {/* Recommendations Section */}
-            {recommendedEvents.length > 0 && (
-                <section>
-                    <div className="flex items-center gap-2 mb-6">
-                        <div className="p-2 bg-yellow-500/10 rounded-full">
-                            <Star className="w-6 h-6 text-yellow-500 fill-yellow-500" />
+            {
+                recommendedEvents.length > 0 && (
+                    <section>
+                        <div className="flex items-center gap-2 mb-6">
+                            <div className="p-2 bg-yellow-500/10 rounded-full">
+                                <Star className="w-6 h-6 text-yellow-500 fill-yellow-500" />
+                            </div>
+                            <div>
+                                <h2 className="text-2xl font-bold">Recommended for You</h2>
+                                <p className="text-sm text-muted-foreground">Based on your interests and location</p>
+                            </div>
                         </div>
-                        <div>
-                            <h2 className="text-2xl font-bold">Recommended for You</h2>
-                            <p className="text-sm text-muted-foreground">Based on your interests and location</p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                            {recommendedEvents.map((event, index) => (
+                                <EventCard key={`rec-${event.id}`} event={event} index={index} isRecommended />
+                            ))}
                         </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        {recommendedEvents.map((event, index) => (
-                            <EventCard key={`rec-${event.id}`} event={event} index={index} isRecommended />
-                        ))}
-                    </div>
-                </section>
-            )}
+                    </section>
+                )
+            }
 
             {/* Search and Filter Section */}
             <section className="space-y-6">

@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { connectMockWallet } from "@/hooks/useMockAccount";
+import { useRouter } from "next/navigation";
 
 interface WalletModalProps {
     isOpen: boolean;
@@ -17,6 +19,7 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
     const { connectors, connect, isPending } = useConnect();
     const [mounted, setMounted] = useState(false);
     const [manualLink, setManualLink] = useState("");
+    const router = useRouter();
 
     useEffect(() => {
         setMounted(true);
@@ -30,6 +33,7 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
         connect({ connector }, {
             onSuccess: () => {
                 onClose();
+                router.push("/profile");
             },
             onError: (err: Error) => {
                 console.error("Wallet connection error:", err);
@@ -50,9 +54,17 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
     const handleManualConnect = () => {
         if (!manualLink) return;
         console.log("Connecting to link:", manualLink);
-        // Here you would implement the logic to connect via the link/URI
-        alert(`Connecting to: ${manualLink}`);
-        onClose();
+
+        // If it looks like an address, connect as mock wallet
+        if (manualLink.startsWith("0x") && manualLink.length === 42) {
+            connectMockWallet(manualLink);
+            onClose();
+            router.push("/profile");
+        } else {
+            // Otherwise treat as URI (placeholder for now)
+            alert(`Connecting to: ${manualLink}`);
+            onClose();
+        }
     };
 
     if (!mounted) return null;
@@ -142,6 +154,16 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
 
                         <div className="p-4 border-t bg-muted/30 text-center text-xs text-muted-foreground">
                             By connecting, you agree to our Terms of Service and Privacy Policy.
+                            <div className="mt-2">
+                                <a
+                                    href="https://metamask.io/download/"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-primary hover:underline font-medium"
+                                >
+                                    Don't have a wallet? Get one here.
+                                </a>
+                            </div>
                         </div>
                     </motion.div>
                 </>

@@ -3,13 +3,16 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Calendar, MapPin, Clock, Share2, ShieldCheck, AlertCircle, CheckCircle2, XCircle, ExternalLink } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Calendar, MapPin, Clock, Share2, ShieldCheck, AlertCircle, CheckCircle2, XCircle, ExternalLink, Copy, Check } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
 import { useWriteContract, useWaitForTransactionReceipt, useAccount } from 'wagmi';
 import { parseEther } from 'viem';
 import { CONTRACT_ABI, CONTRACT_ADDRESS } from "@/utils/contract";
 import { WalletModal } from "@/components/WalletModal";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 // Mock Data Store - In a real app, this would be an API call
 import { EVENTS_DATA } from "@/data/mockData";
@@ -20,8 +23,16 @@ export default function EventDetailsPage() {
     const event = EVENTS_DATA.find(e => e.id === id);
     const { isConnected } = useAccount();
     const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
+    const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+    const [isCopied, setIsCopied] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+    const copyToClipboard = () => {
+        navigator.clipboard.writeText(window.location.href);
+        setIsCopied(true);
+        setTimeout(() => setIsCopied(false), 2000);
+    };
 
     const { data: hash, isPending, writeContract, error: writeError, reset } = useWriteContract();
 
@@ -67,8 +78,7 @@ export default function EventDetailsPage() {
     }, [writeError, txError]);
 
     const handleShare = () => {
-        navigator.clipboard.writeText(window.location.href);
-        alert("Link copied to clipboard!");
+        setIsShareModalOpen(true);
     };
 
     useEffect(() => {
@@ -314,6 +324,42 @@ export default function EventDetailsPage() {
                 isOpen={isWalletModalOpen}
                 onClose={() => setIsWalletModalOpen(false)}
             />
+
+            <Dialog open={isShareModalOpen} onOpenChange={setIsShareModalOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Share Event</DialogTitle>
+                    </DialogHeader>
+                    <div className="flex items-center space-x-2">
+                        <div className="grid flex-1 gap-2">
+                            <Label htmlFor="link" className="sr-only">
+                                Link
+                            </Label>
+                            <Input
+                                id="link"
+                                defaultValue={typeof window !== 'undefined' ? window.location.href : ''}
+                                readOnly
+                            />
+                        </div>
+                        <Button type="submit" size="sm" className="px-3" onClick={copyToClipboard}>
+                            <span className="sr-only">Copy</span>
+                            {isCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                        </Button>
+                    </div>
+                    <div className="flex justify-center gap-4 mt-4">
+                        {/* Social Share Buttons (Mock functionality) */}
+                        <Button variant="outline" size="icon" className="rounded-full" onClick={() => window.open(`https://twitter.com/intent/tweet?text=Check out ${event.name} on ChainTicket+!&url=${window.location.href}`, '_blank')}>
+                            <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
+                        </Button>
+                        <Button variant="outline" size="icon" className="rounded-full" onClick={() => window.open(`https://www.facebook.com/sharer/sharer.php?u=${window.location.href}`, '_blank')}>
+                            <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M9.101 23.691v-7.98H6.627v-3.667h2.474v-1.58c0-4.085 1.848-5.978 5.858-5.978.401 0 .955.042 1.468.103a8.68 8.68 0 0 1 1.141.195v3.325a8.623 8.623 0 0 0-.653-.036c-2.148 0-2.797 1.603-2.797 4.16v1.912h4.141l-.542 3.667h-3.599v7.98h-5.018Z" /></svg>
+                        </Button>
+                        <Button variant="outline" size="icon" className="rounded-full" onClick={() => window.open(`mailto:?subject=Check out ${event.name}&body=I found this amazing event on ChainTicket+: ${window.location.href}`, '_blank')}>
+                            <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M1.5 8.67v8.58a3 3 0 0 0 3 3h15a3 3 0 0 0 3-3V8.67l-8.928 5.493a3 3 0 0 1-3.144 0L1.5 8.67Z" /><path d="M22.5 6.908V6.75a3 3 0 0 0-3-3h-15a3 3 0 0 0-3 3v.158l9.714 5.978a1.5 1.5 0 0 0 1.572 0L22.5 6.908Z" /></svg>
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

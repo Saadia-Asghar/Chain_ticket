@@ -1,15 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useAccount, useDisconnect } from "wagmi";
+import { useDisconnect } from "wagmi";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { ModeToggle } from "@/components/ModeToggle";
 import { Wallet } from "lucide-react";
 import { WalletModal } from "@/components/WalletModal";
+import { useMockAccount } from "@/hooks/useMockAccount";
 
 export function Navbar() {
-    const { address, isConnected } = useAccount();
+    const { address, isConnected, isMockConnected, disconnectMock } = useMockAccount();
     const { disconnect } = useDisconnect();
     const [mounted, setMounted] = useState(false);
     const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
@@ -17,6 +18,14 @@ export function Navbar() {
     useEffect(() => {
         setMounted(true);
     }, []);
+
+    const handleDisconnect = () => {
+        if (isMockConnected) {
+            disconnectMock();
+        } else {
+            disconnect();
+        }
+    };
 
     if (!mounted) return null;
 
@@ -45,7 +54,7 @@ export function Navbar() {
                             <Link href="/profile" className="text-xs font-mono text-muted-foreground hover:text-primary transition-colors">
                                 {address?.slice(0, 6)}...{address?.slice(-4)}
                             </Link>
-                            <Button variant="ghost" size="sm" className="h-7 rounded-full px-3 hover:bg-destructive/10 hover:text-destructive" onClick={() => disconnect()}>
+                            <Button variant="ghost" size="sm" className="h-7 rounded-full px-3 hover:bg-destructive/10 hover:text-destructive" onClick={handleDisconnect}>
                                 Disconnect
                             </Button>
                         </div>
