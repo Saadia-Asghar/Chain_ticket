@@ -14,25 +14,42 @@ export default function OrganizerDashboard() {
     const { address, isConnected } = useMockAccount();
     const [events, setEvents] = useState<Event[]>([]);
     const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
+    const [loading, setLoading] = useState(true);
+
+    const fetchEvents = async () => {
+        try {
+            const allEvents = await getEvents();
+            console.log("Fetched all events:", allEvents.length);
+            setEvents(allEvents);
+        } catch (error) {
+            console.error("Failed to fetch events:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchEvents = async () => {
-            const allEvents = await getEvents();
-            setEvents(allEvents);
-        };
         fetchEvents();
+
+        const handleEventsUpdated = () => {
+            console.log("Events updated event received, refetching...");
+            fetchEvents();
+        };
+
+        window.addEventListener('eventsUpdated', handleEventsUpdated);
+        return () => window.removeEventListener('eventsUpdated', handleEventsUpdated);
     }, []);
 
-    // In a real app, we would filter by the connected wallet address
-    // For demo purposes, we'll show events if connected, or a specific set if we match the mock data addresses
-    const myEvents = isConnected ? events : [];
+    // Filter by connected wallet address (Case Insensitive)
+    const myEvents = isConnected && address
+        ? events.filter(e => e.organizerAddress && e.organizerAddress.toLowerCase() === address.toLowerCase())
+        : [];
 
-    const totalRevenue = myEvents.reduce((acc, event) => acc + (parseFloat(event.price) * event.minted), 0);
-    const totalTicketsSold = myEvents.reduce((acc, event) => acc + event.minted, 0);
+    const totalRevenue = myEvents.reduce((acc, event) => acc + (parseFloat(event.price || "0") * (event.minted || 0)), 0);
+    const totalTicketsSold = myEvents.reduce((acc, event) => acc + (event.minted || 0), 0);
     const totalEvents = myEvents.length;
 
     const handleDownloadAttendees = (event: any) => {
-        // Generate mock attendee data
         const attendees = Array.from({ length: event.minted }, (_, i) => ({
             ticketId: i + 1,
             walletAddress: `0x${Math.random().toString(16).slice(2, 42).padEnd(40, '0')}`,
@@ -41,14 +58,12 @@ export default function OrganizerDashboard() {
             status: Math.random() > 0.8 ? "Used" : "Valid"
         }));
 
-        // Convert to CSV
         const headers = ["Ticket ID", "Wallet Address", "Purchase Date", "Price (ETH)", "Status"];
         const csvContent = [
             headers.join(","),
             ...attendees.map(a => [a.ticketId, a.walletAddress, a.purchaseDate, a.price, a.status].join(","))
         ].join("\n");
 
-        // Create and trigger download
         const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
         const link = document.createElement("a");
         const url = URL.createObjectURL(blob);
@@ -128,53 +143,68 @@ export default function OrganizerDashboard() {
                 <TrendingUp className="w-6 h-6 text-primary" /> Your Events
             </h2>
 
-            <div className="grid grid-cols-1 gap-6">
-                {myEvents.map((event, index) => (
-                    <motion.div
-                        key={event.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        className="bg-card border rounded-2xl p-6 flex flex-col md:flex-row gap-6 items-center hover:shadow-lg transition-all"
-                    >
-                        <div className={`w-full md:w-48 h-32 ${event.image} rounded-xl flex-shrink-0`} />
-
-                        <div className="flex-grow space-y-2 text-center md:text-left">
-                            <h3 className="text-xl font-bold">{event.name}</h3>
-                            <div className="flex flex-wrap justify-center md:justify-start gap-4 text-sm text-muted-foreground">
-                                <span className="flex items-center gap-1"><Calendar className="w-4 h-4" /> {event.date}</span>
-                                <span className="flex items-center gap-1"><DollarSign className="w-4 h-4" /> {event.price} ETH</span>
+            {myEvents.length === 0 ? (
+                <div className="text-center py-12 bg-secondary/10 rounded-3xl border border-dashed">
+                    <p className="text-muted-foreground mb-4">You haven&apos;t created any events yet.</p>
+                    <Link href="/create-event">
+                        <Button variant="outline">Create Your First Event</Button>
+                    </Link>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 gap-6">
+                    {myEvents.map((event, index) => (
+                        <motion.div
+                            key={event.id}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: index * 0.1 }}
+                            className="bg-card border rounded-2xl p-6 flex flex-col md:flex-row gap-6 items-center hover:shadow-lg transition-all"
+                        >
+                            <div className="w-full md:w-48 h-32 rounded-xl overflow-hidden flex-shrink-0">
+                                {event.image?.startsWith("http") || event.image?.startsWith("data") ? (
+                                    <img src={event.image} alt={event.name} className="w-full h-full object-cover" />
+                                ) : (
+                                    <div className={`w-full h-full ${event.image} bg-cover bg-center`} />
+                                )}
                             </div>
-                        </div>
 
-                        <div className="flex flex-col items-center md:items-end gap-2 min-w-[150px]">
-                            <div className="text-right">
-                                <p className="text-sm text-muted-foreground">Sales</p>
-                                <p className="font-bold text-lg">{event.minted} / {event.supply}</p>
+                            <div className="flex-grow space-y-2 text-center md:text-left">
+                                <h3 className="text-xl font-bold">{event.name}</h3>
+                                <div className="flex flex-wrap justify-center md:justify-start gap-4 text-sm text-muted-foreground">
+                                    <span className="flex items-center gap-1"><Calendar className="w-4 h-4" /> {event.date}</span>
+                                    <span className="flex items-center gap-1"><DollarSign className="w-4 h-4" /> {event.price} ETH</span>
+                                </div>
                             </div>
-                            <div className="w-full bg-secondary h-2 rounded-full overflow-hidden mt-1">
-                                <div
-                                    className="bg-primary h-full rounded-full"
-                                    style={{ width: `${(event.minted / event.supply) * 100}%` }}
-                                />
-                            </div>
-                        </div>
 
-                        <div className="flex gap-2">
-                            <Button
-                                variant="outline"
-                                onClick={() => handleDownloadAttendees(event)}
-                                title="Download Attendee Data"
-                            >
-                                <Download className="w-4 h-4 mr-2" /> Data
-                            </Button>
-                            <Link href={`/events/${event.id}`}>
-                                <Button variant="outline">View</Button>
-                            </Link>
-                        </div>
-                    </motion.div>
-                ))}
-            </div>
+                            <div className="flex flex-col items-center md:items-end gap-2 min-w-[150px]">
+                                <div className="text-right">
+                                    <p className="text-sm text-muted-foreground">Sales</p>
+                                    <p className="font-bold text-lg">{event.minted} / {event.supply}</p>
+                                </div>
+                                <div className="w-full bg-secondary h-2 rounded-full overflow-hidden mt-1">
+                                    <div
+                                        className="bg-primary h-full rounded-full"
+                                        style={{ width: `${(event.minted / event.supply) * 100}%` }}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex gap-2">
+                                <Button
+                                    variant="outline"
+                                    onClick={() => handleDownloadAttendees(event)}
+                                    title="Download Attendee Data"
+                                >
+                                    <Download className="w-4 h-4 mr-2" /> Data
+                                </Button>
+                                <Link href={`/events/${event.id}`}>
+                                    <Button variant="outline">View</Button>
+                                </Link>
+                            </div>
+                        </motion.div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 }
