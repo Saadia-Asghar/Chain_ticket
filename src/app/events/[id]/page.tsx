@@ -46,11 +46,6 @@ export default function EventDetailsPage() {
         fetchEventAndSimilar();
     }, [id]);
 
-    // ... (rest of component)
-
-    // In the JSX:
-    // {similarEvents.map((similarEvent) => ( ... ))}
-
     const copyToClipboard = () => {
         navigator.clipboard.writeText(window.location.href);
         setIsCopied(true);
@@ -104,24 +99,31 @@ export default function EventDetailsPage() {
         setIsShareModalOpen(true);
     };
 
+    // Save ticket when transaction is confirmed
     useEffect(() => {
         const saveTicketToFirebase = async () => {
             if (isConfirmed && hash && event && address) {
                 setSuccessMessage("Ticket minted successfully!");
                 setError(null);
 
+                const ticketId = Date.now().toString();
+                // Use window.location.origin to support deployed environments
+                const baseUrl = window.location.origin;
+                const verifyUrl = `${baseUrl}/verify/${ticketId}`;
+                const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(verifyUrl)}`;
+
                 await saveTicket({
-                    id: Date.now().toString(), // Or use a proper ID from the event log if possible
+                    id: ticketId,
                     eventId: event.id,
                     eventName: event.name,
                     eventDate: event.date,
                     eventLocation: event.location,
                     eventImage: event.image,
-                    qrData: `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`http://localhost:3000/verify/${Date.now()}`)}`,
+                    qrData: qrCodeUrl,
                     ownerAddress: address,
                     isUsed: false
                 });
-                console.log("Ticket saved to Firebase");
+                console.log("Ticket saved with ID:", ticketId);
             }
         };
         saveTicketToFirebase();
@@ -138,10 +140,20 @@ export default function EventDetailsPage() {
         );
     }
 
+    // Check if image is custom or tailwind
+    const isCustomImage = event.image?.startsWith('data:') || event.image?.startsWith('http');
+
     return (
         <div className="min-h-screen pb-20">
             {/* Hero Section */}
-            <div className={`h-[45vh] ${event.image} relative flex items-end transition-all duration-500`}>
+            <div className={`h-[45vh] relative flex items-end overflow-hidden`}>
+                {/* Background Image Logic */}
+                {isCustomImage ? (
+                    <img src={event.image} alt={event.name} className="absolute inset-0 w-full h-full object-cover" />
+                ) : (
+                    <div className={`absolute inset-0 w-full h-full ${event.image} bg-cover bg-center`} />
+                )}
+
                 <div className="absolute inset-0 bg-black/40" />
                 <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
 
@@ -184,7 +196,7 @@ export default function EventDetailsPage() {
                             About Event
                             <div className="h-1 w-12 bg-primary rounded-full ml-2" />
                         </h2>
-                        <p className="text-muted-foreground leading-relaxed text-lg text-justify">
+                        <p className="text-muted-foreground leading-relaxed text-lg text-justify whitespace-pre-wrap">
                             {event.description}
                         </p>
                     </motion.section>
@@ -334,7 +346,13 @@ export default function EventDetailsPage() {
                                 whileHover={{ y: -8 }}
                                 className="group h-full bg-card border rounded-3xl overflow-hidden hover:shadow-2xl hover:shadow-primary/10 transition-all duration-300 flex flex-col w-full"
                             >
-                                <div className={`h-48 ${similarEvent.image} bg-cover bg-center relative overflow-hidden w-full`}>
+                                <div className={`h-48 relative overflow-hidden w-full`}>
+                                    {/* Similar event custom image check */}
+                                    {(similarEvent.image?.startsWith('data:') || similarEvent.image?.startsWith('http')) ? (
+                                        <img src={similarEvent.image} alt={similarEvent.name} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className={`w-full h-full ${similarEvent.image} bg-cover bg-center`} />
+                                    )}
                                     <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
                                     <div className="absolute top-4 right-4 bg-white/20 backdrop-blur-md text-white text-xs font-bold px-3 py-1 rounded-full border border-white/20">
                                         {similarEvent.category}
@@ -400,7 +418,7 @@ export default function EventDetailsPage() {
                         </Button>
                     </div>
                     <div className="flex justify-center gap-4 mt-4">
-                        {/* Social Share Buttons (Mock functionality) */}
+                        {/* Social Share Buttons */}
                         <Button variant="outline" size="icon" className="rounded-full" onClick={() => window.open(`https://twitter.com/intent/tweet?text=Check out ${event.name} on ChainTicket+!&url=${window.location.href}`, '_blank')}>
                             <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
                         </Button>

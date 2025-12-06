@@ -189,6 +189,54 @@ export const getTickets = async (ownerAddress?: string): Promise<Ticket[]> => {
     }
 };
 
+export const getTicketById = async (ticketId: string): Promise<Ticket | undefined> => {
+    // 1. Check Local Storage
+    if (typeof window !== 'undefined') {
+        const localTickets = JSON.parse(localStorage.getItem('local_tickets') || '[]');
+        const localTicket = localTickets.find((t: Ticket) => t.id === ticketId);
+        if (localTicket) return localTicket;
+    }
+
+    try {
+        // 2. Check Firebase
+        const q = query(collection(db, "tickets"), where("id", "==", ticketId));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+            return { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() } as Ticket;
+        }
+        return undefined;
+    } catch (error) {
+        console.error("Error fetching ticket from Firebase:", error);
+        return undefined;
+    }
+};
+
+export const updateTicket = async (updatedTicket: Ticket) => {
+    try {
+        // Update Local Storage
+        if (typeof window !== 'undefined') {
+            const localTickets = JSON.parse(localStorage.getItem('local_tickets') || '[]');
+            const index = localTickets.findIndex((t: Ticket) => t.id === updatedTicket.id);
+            if (index !== -1) {
+                localTickets[index] = updatedTicket;
+                localStorage.setItem('local_tickets', JSON.stringify(localTickets));
+                window.dispatchEvent(new Event('ticketsUpdated'));
+            }
+        }
+
+        // Update Firebase
+        const q = query(collection(db, "tickets"), where("id", "==", updatedTicket.id));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+            const docRef = querySnapshot.docs[0].ref;
+            await updateDoc(docRef, { ...updatedTicket });
+            console.log("Ticket updated in Firebase:", updatedTicket);
+        }
+    } catch (error) {
+        console.error("Error updating ticket in Firebase:", error);
+    }
+};
+
 export const saveTicket = async (ticket: Ticket) => {
     try {
         // Save to Local Storage first for instant update
@@ -212,9 +260,6 @@ export const initializeEvents = async (initialEvents: Event[]) => {
     try {
         // Check if events exist, if not, seed them
         const existingEvents = await getEvents();
-        // Only seed if absolutely no events exist (which is rare now with mock data fallback, but useful for clean firebase)
-        // Actually, we probably don't need to aggressive seed if getEvents handles fallback well.
-        // Let's just check firebase specifically.
         const querySnapshot = await getDocs(collection(db, "events"));
         if (querySnapshot.empty) {
             console.log("Seeding initial events to Firebase...");
