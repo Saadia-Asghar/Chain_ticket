@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { Connector, useConnect } from "wagmi";
-import { X, Wallet, ArrowRight, Link as LinkIcon } from "lucide-react";
+import { X, Wallet, ArrowRight, Link as LinkIcon, UserCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect } from "react";
@@ -15,6 +15,8 @@ interface WalletModalProps {
     onClose: () => void;
 }
 
+const DEMO_ADDRESS = "0x1111111111111111111111111111111111111111";
+
 export function WalletModal({ isOpen, onClose }: WalletModalProps) {
     const { connectors, connect, isPending } = useConnect();
     const [mounted, setMounted] = useState(false);
@@ -26,17 +28,11 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
     }, []);
 
     const uniqueConnectors = connectors.filter((c) => {
-        // Filter out Safe connector if not in Safe context (iframe)
-        // Safe Apps always run in an iframe. If we are in the main window, we are not in a Safe App.
         if (c.id === 'safe') {
             if (typeof window !== 'undefined' && window.parent === window) {
                 return false;
             }
         }
-
-        // Filter out injected connector if:
-        // 1. No provider is found (prevent errors)
-        // 2. MetaMask connector is available (prevent duplicates, as MetaMask is also 'injected')
         if (c.id === 'injected') {
             if (typeof window !== 'undefined' && !(window as any).ethereum) {
                 return false;
@@ -45,7 +41,6 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
                 return false;
             }
         }
-
         return true;
     }).filter((c, index, self) =>
         index === self.findIndex((t) => t.id === c.id)
@@ -55,19 +50,9 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
         connect({ connector }, {
             onSuccess: () => {
                 onClose();
-                // Only redirect if we are on a public page that doesn't require auth, 
-                // or if we want to force profile. 
-                // Better to stay on current page usually, but user asked for workflow fix.
-                // Let's keep the redirect to profile or maybe just close if already on a protected page.
-                // For now, keeping existing behavior but ensuring it works.
-                // router.push("/profile"); 
-                // actually, let's just close the modal. The protected pages will auto-update.
-                // If we are on home, maybe go to dashboard? 
-                // Let's leave the router.push for now as it was there, but maybe check path.
             },
             onError: (err: Error) => {
                 console.error("Wallet connection error:", err);
-                // Show more user-friendly error messages
                 let errorMessage = err.message;
                 if (err.message.includes("User rejected")) {
                     errorMessage = "Connection cancelled. Please try again.";
@@ -83,18 +68,19 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
 
     const handleManualConnect = () => {
         if (!manualLink) return;
-        console.log("Connecting to link:", manualLink);
 
-        // If it looks like an address, connect as mock wallet
         if (manualLink.startsWith("0x") && manualLink.length === 42) {
             connectMockWallet(manualLink);
             onClose();
-            router.push("/profile");
         } else {
-            // Otherwise treat as URI (placeholder for now)
             alert(`Connecting to: ${manualLink}`);
             onClose();
         }
+    };
+
+    const handleDemoLogin = () => {
+        connectMockWallet(DEMO_ADDRESS);
+        onClose();
     };
 
     if (!mounted) return null;
@@ -134,7 +120,24 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
                                 Choose a wallet to connect to ChainTicket+.
                             </p>
 
-                            <div className="space-y-2 max-h-[240px] overflow-y-auto pr-2 custom-scrollbar mb-6">
+                            <div className="space-y-2 max-h-[260px] overflow-y-auto pr-2 custom-scrollbar mb-4">
+                                {/* Demo Login Button */}
+                                <button
+                                    onClick={handleDemoLogin}
+                                    className="w-full flex items-center justify-between p-4 rounded-xl border border-primary/20 bg-primary/5 hover:border-primary hover:bg-primary/10 transition-all group text-left mb-3"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                                            <UserCircle2 className="w-6 h-6 text-primary" />
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-primary">Demo Account</p>
+                                            <p className="text-xs text-muted-foreground">Log in with pre-filled test data</p>
+                                        </div>
+                                    </div>
+                                    <ArrowRight className="w-5 h-5 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </button>
+
                                 {uniqueConnectors.map((connector) => (
                                     <button
                                         key={connector.uid}

@@ -2,6 +2,8 @@ import { db } from "@/lib/firebase";
 import { collection, addDoc, getDocs, query, where, updateDoc, doc, setDoc, getDoc } from "firebase/firestore";
 import { EVENTS_DATA } from "@/data/mockData";
 
+export const DEMO_ADDRESS = "0x1111111111111111111111111111111111111111";
+
 export interface Event {
     id: string;
     name: string;
@@ -34,9 +36,15 @@ export interface Ticket {
 
 export async function getEvents(): Promise<Event[]> {
     try {
+        // Start with Mock Data
+        // Patch Mock Data to assign events to Demo User
+        const allEvents = JSON.parse(JSON.stringify(EVENTS_DATA)); // Deep copy to avoid mutation issues
+        allEvents[0].organizerAddress = DEMO_ADDRESS;
+        allEvents[1].organizerAddress = DEMO_ADDRESS;
+
         // Check if we're in a browser environment
         if (typeof window === 'undefined') {
-            return EVENTS_DATA; // Server-side fallback
+            return allEvents;
         }
 
         // Fetch from Firebase
@@ -46,12 +54,9 @@ export async function getEvents(): Promise<Event[]> {
         // Get local events
         const localEvents = JSON.parse(localStorage.getItem('local_events') || '[]');
 
-        // Start with Mock Data
-        const allEvents = [...EVENTS_DATA];
-
         // Merge Firebase Events (override mock if same ID)
         firebaseEvents.forEach(fbEvent => {
-            const index = allEvents.findIndex(e => e.id === fbEvent.id);
+            const index = allEvents.findIndex((e: Event) => e.id === fbEvent.id);
             if (index !== -1) {
                 allEvents[index] = fbEvent;
             } else {
@@ -61,7 +66,7 @@ export async function getEvents(): Promise<Event[]> {
 
         // Merge Local Storage Events (override all if same ID)
         localEvents.forEach((localEvent: Event) => {
-            const index = allEvents.findIndex(e => e.id === localEvent.id);
+            const index = allEvents.findIndex((e: Event) => e.id === localEvent.id);
             if (index !== -1) {
                 allEvents[index] = localEvent;
             } else {
@@ -70,21 +75,35 @@ export async function getEvents(): Promise<Event[]> {
         });
 
         // Filter duplicates strictly
-        return allEvents.filter((v, i, a) => a.findIndex(t => (t.id === v.id)) === i);
+        return allEvents.filter((v: Event, i: number, a: Event[]) => a.findIndex(t => (t.id === v.id)) === i);
 
     } catch (error) {
         console.warn("Using fallback data (Firebase error):", error);
+        // Fallback with patched mock data
+        const patchedEvents = JSON.parse(JSON.stringify(EVENTS_DATA));
+        patchedEvents[0].organizerAddress = DEMO_ADDRESS;
+        patchedEvents[1].organizerAddress = DEMO_ADDRESS;
+
         if (typeof window !== 'undefined') {
             const localEvents = JSON.parse(localStorage.getItem('local_events') || '[]');
-            return [...EVENTS_DATA, ...localEvents].filter((v, i, a) => a.findIndex(t => (t.id === v.id)) === i);
+            localEvents.forEach((localEvent: Event) => {
+                const index = patchedEvents.findIndex((e: Event) => e.id === localEvent.id);
+                if (index !== -1) patchedEvents[index] = localEvent;
+                else patchedEvents.push(localEvent);
+            });
+            return patchedEvents;
         }
-        return EVENTS_DATA;
+        return patchedEvents;
     }
 }
 
 export async function getEventById(id: string): Promise<Event | undefined> {
-    // 0. Check Mock Data FIRST (Fastest and relies on static data)
-    const mockEvent = EVENTS_DATA.find(e => e.id === id);
+    // 0. Check Mock Data FIRST
+    const mockEvents = JSON.parse(JSON.stringify(EVENTS_DATA));
+    mockEvents[0].organizerAddress = DEMO_ADDRESS;
+    mockEvents[1].organizerAddress = DEMO_ADDRESS;
+
+    const mockEvent = mockEvents.find((e: Event) => e.id === id);
     if (mockEvent) return mockEvent;
 
     // 1. Check Local Storage
@@ -101,9 +120,7 @@ export async function getEventById(id: string): Promise<Event | undefined> {
         if (docSnap.exists()) {
             return { id: docSnap.id, ...docSnap.data() } as Event;
         }
-
         return undefined;
-
     } catch (error) {
         console.error("Error fetching event from Firebase:", error);
         return undefined;
@@ -117,7 +134,6 @@ export async function saveEvent(event: Event) {
             const filtered = localEvents.filter((e: Event) => e.id !== event.id);
             filtered.push(event);
             localStorage.setItem('local_events', JSON.stringify(filtered));
-
             window.dispatchEvent(new Event('eventsUpdated'));
         }
 
@@ -152,6 +168,56 @@ export async function updateEvent(updatedEvent: Event) {
 
 export async function getTickets(ownerAddress?: string): Promise<Ticket[]> {
     if (!ownerAddress) return [];
+
+    // DEMO USER TICKETS
+    if (ownerAddress === DEMO_ADDRESS) {
+        // Return 3 mock tickets
+        const events = EVENTS_DATA.slice(0, 3);
+        const demoTickets = events.map((event, i) => ({
+            id: `demo-ticket-${i + 1}`,
+            eventId: event.id,
+            eventName: event.name,
+            eventDate: event.date,
+            eventLocation: event.location,
+            eventImage: event.image,
+            qrData: `CTP-${event.id}-demo-${i + 1}`,
+            ownerAddress: DEMO_ADDRESS,
+            isUsed: i === 1 // Make 2nd ticket 'Used' for testing
+        }));
+
+        // Merge with any local modifications for Demo User (e.g. transfers)
+        if (typeof window !== 'undefined') {
+            const localTickets = JSON.parse(localStorage.getItem('local_tickets') || '[]');
+            // If local storage has tickets, prioritize them or merge?
+            // Simple logic: if specific ticket ID exists locally, use it (it might be transferred out)
+            // But if transferred OUT, it won't be in 'localTickets' filtered by owner.
+
+            // Actually, let's just use local tickets if they exist, else return default demo tickets.
+            // But wait, if I transfer a ticket away, I want it GONE.
+            // If I haven't touched them, I want them there.
+
+            // Allow "Mock" tickets to be "virtual".
+            // If I transfer a mock ticket, I should save the "new state" in local storage.
+            // Complex. For now, Demo Tickets are returned STATICALLY unless we implement intricate "Mock State".
+            // Let's keep it simple: Demo Tickets are always there for testing, unless overridden locally?
+
+            // To support transfer: checking if this ticket ID is in `local_tickets` with DIFFERENT owner?
+            // This is getting complicated for a simple demo. 
+            // I'll just return static tickets. Transfers might "look" like they work but on refresh they might come back if I don't persist them locally.
+            // I'll persist them locally on first load?
+
+            // Better:
+            const storedDemoTickets = localStorage.getItem('demo_tickets_initialized');
+            if (!storedDemoTickets) {
+                // Initialize demo tickets in local storage
+                const currentLocal = JSON.parse(localStorage.getItem('local_tickets') || '[]');
+                const newLocal = [...currentLocal, ...demoTickets];
+                localStorage.setItem('local_tickets', JSON.stringify(newLocal));
+                localStorage.setItem('demo_tickets_initialized', 'true');
+                return demoTickets;
+            }
+        }
+    }
 
     let tickets: Ticket[] = [];
 
@@ -206,9 +272,12 @@ export async function updateTicket(updatedTicket: Ticket) {
             const index = localTickets.findIndex((t: Ticket) => t.id === updatedTicket.id);
             if (index !== -1) {
                 localTickets[index] = updatedTicket;
-                localStorage.setItem('local_tickets', JSON.stringify(localTickets));
-                window.dispatchEvent(new Event('ticketsUpdated'));
+            } else {
+                // If not found (maybe it was a virtual mock ticket being updated/transferred), add it
+                localTickets.push(updatedTicket);
             }
+            localStorage.setItem('local_tickets', JSON.stringify(localTickets));
+            window.dispatchEvent(new Event('ticketsUpdated'));
         }
 
         // Find doc in Firebase
