@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { QrCode, Calendar, MapPin, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useMockAccount } from "@/hooks/useMockAccount";
+import { WalletModal } from "@/components/WalletModal";
 import { getTickets } from "@/services/storage";
 
 
@@ -26,6 +27,8 @@ export default function MyTicketsPage() {
         fetchTickets();
     }, [isConnected, address]);
 
+    const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
+
     if (!isConnected) {
         return (
             <div className="container mx-auto py-20 px-4 min-h-screen flex flex-col items-center justify-center text-center">
@@ -41,7 +44,14 @@ export default function MyTicketsPage() {
                     <p className="text-muted-foreground text-lg">
                         Please connect your wallet to view your tickets and access your QR codes.
                     </p>
+                    <Button onClick={() => setIsWalletModalOpen(true)} className="mt-4">
+                        Connect Wallet
+                    </Button>
                 </motion.div>
+                <WalletModal
+                    isOpen={isWalletModalOpen}
+                    onClose={() => setIsWalletModalOpen(false)}
+                />
             </div>
         );
     }
