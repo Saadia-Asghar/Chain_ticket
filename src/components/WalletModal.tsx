@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { Connector, useConnect } from "wagmi";
-import { X, Wallet, ArrowRight, Link as LinkIcon, UserCircle2 } from "lucide-react";
+import { X, Wallet, ArrowRight, Link as LinkIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect } from "react";
@@ -14,8 +14,6 @@ interface WalletModalProps {
     isOpen: boolean;
     onClose: () => void;
 }
-
-const DEMO_ADDRESS = "0x1111111111111111111111111111111111111111";
 
 export function WalletModal({ isOpen, onClose }: WalletModalProps) {
     const { connectors, connect, isPending } = useConnect();
@@ -78,11 +76,6 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
         }
     };
 
-    const handleDemoLogin = () => {
-        connectMockWallet(DEMO_ADDRESS);
-        onClose();
-    };
-
     if (!mounted) return null;
 
     const modalContent = (
@@ -121,23 +114,6 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
                             </p>
 
                             <div className="space-y-2 max-h-[260px] overflow-y-auto pr-2 custom-scrollbar mb-4">
-                                {/* Demo Login Button */}
-                                <button
-                                    onClick={handleDemoLogin}
-                                    className="w-full flex items-center justify-between p-4 rounded-xl border border-primary/20 bg-primary/5 hover:border-primary hover:bg-primary/10 transition-all group text-left mb-3"
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                                            <UserCircle2 className="w-6 h-6 text-primary" />
-                                        </div>
-                                        <div>
-                                            <p className="font-bold text-primary">Demo Account</p>
-                                            <p className="text-xs text-muted-foreground">Log in with pre-filled test data</p>
-                                        </div>
-                                    </div>
-                                    <ArrowRight className="w-5 h-5 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
-                                </button>
-
                                 {uniqueConnectors.map((connector) => (
                                     <button
                                         key={connector.uid}
@@ -172,7 +148,7 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
                                     <div className="relative flex-grow">
                                         <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                                         <Input
-                                            placeholder="Enter wallet link..."
+                                            placeholder="Enter wallet link or address..."
                                             className="pl-9 h-10 rounded-xl"
                                             value={manualLink}
                                             onChange={(e) => setManualLink(e.target.value)}
