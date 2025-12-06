@@ -8,10 +8,12 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { getEvents, Event } from "@/services/storage";
 import { useMockAccount } from "@/hooks/useMockAccount";
+import { WalletModal } from "@/components/WalletModal";
 
 export default function OrganizerDashboard() {
     const { address, isConnected } = useMockAccount();
     const [events, setEvents] = useState<Event[]>([]);
+    const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
 
     useEffect(() => {
         const fetchEvents = async () => {
@@ -60,9 +62,27 @@ export default function OrganizerDashboard() {
 
     if (!isConnected) {
         return (
-            <div className="container mx-auto py-20 text-center min-h-[60vh] flex flex-col items-center justify-center">
-                <h1 className="text-3xl font-bold mb-4">Organizer Dashboard</h1>
-                <p className="text-muted-foreground mb-8">Please connect your wallet to view your dashboard.</p>
+            <div className="container mx-auto py-20 px-4 min-h-screen flex flex-col items-center justify-center text-center">
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="max-w-md space-y-6"
+                >
+                    <div className="w-24 h-24 bg-secondary/50 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <TrendingUp className="w-12 h-12 text-muted-foreground" />
+                    </div>
+                    <h1 className="text-3xl font-bold">Organizer Dashboard</h1>
+                    <p className="text-muted-foreground text-lg">
+                        Please connect your wallet to view your dashboard and manage events.
+                    </p>
+                    <Button onClick={() => setIsWalletModalOpen(true)} className="mt-4">
+                        Connect Wallet
+                    </Button>
+                </motion.div>
+                <WalletModal
+                    isOpen={isWalletModalOpen}
+                    onClose={() => setIsWalletModalOpen(false)}
+                />
             </div>
         );
     }

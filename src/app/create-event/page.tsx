@@ -51,10 +51,37 @@ export default function CreateEventPage() {
         hash,
     });
 
+    if (!isConnected) {
+        return (
+            <div className="container mx-auto py-20 px-4 min-h-screen flex flex-col items-center justify-center text-center">
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="max-w-md space-y-6"
+                >
+                    <div className="w-24 h-24 bg-secondary/50 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <Users className="w-12 h-12 text-muted-foreground" />
+                    </div>
+                    <h1 className="text-3xl font-bold">Connect Wallet</h1>
+                    <p className="text-muted-foreground text-lg">
+                        Please connect your wallet to create and manage events.
+                    </p>
+                    <Button onClick={() => setIsWalletModalOpen(true)} className="mt-4">
+                        Connect Wallet
+                    </Button>
+                </motion.div>
+                <WalletModal
+                    isOpen={isWalletModalOpen}
+                    onClose={() => setIsWalletModalOpen(false)}
+                />
+            </div>
+        );
+    }
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Check if wallet is connected
+        // Check if wallet is connected (redundant but safe)
         if (!isConnected) {
             setIsWalletModalOpen(true);
             return;

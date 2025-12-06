@@ -38,17 +38,21 @@ export function Navbar() {
                     ChainTicket+
                 </Link>
                 <div className="flex items-center gap-4">
-                    <Link href="/create-event" className="text-sm font-medium hover:text-primary transition-colors hidden md:block">
-                        Create Event
-                    </Link>
+                    {isConnected && (
+                        <>
+                            <Link href="/create-event" className="text-sm font-medium hover:text-primary transition-colors hidden md:block">
+                                Create Event
+                            </Link>
+                            <Link href="/my-tickets" className="text-sm font-medium hover:text-primary transition-colors hidden md:block">
+                                My Tickets
+                            </Link>
+                            <Link href="/organizer" className="text-sm font-medium hover:text-primary transition-colors hidden md:block">
+                                Organizer
+                            </Link>
+                        </>
+                    )}
                     <Link href="/events" className="text-sm font-medium hover:text-primary transition-colors hidden md:block">
                         Browse Events
-                    </Link>
-                    <Link href="/my-tickets" className="text-sm font-medium hover:text-primary transition-colors hidden md:block">
-                        My Tickets
-                    </Link>
-                    <Link href="/organizer" className="text-sm font-medium hover:text-primary transition-colors hidden md:block">
-                        Organizer
                     </Link>
 
                     {isConnected ? (
