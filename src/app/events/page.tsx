@@ -12,20 +12,24 @@ import { initializeEvents, getEvents, Event } from "@/services/storage";
 
 export default function EventsPage() {
     const { interests, location } = useUserPreferences();
-    const [events, setEvents] = useState<Event[]>([]);
+    // Initialize with mock data immediately so users see events instantly
+    const [events, setEvents] = useState<Event[]>(EVENTS_DATA);
     const [searchQuery, setSearchQuery] = useState("");
 
     useEffect(() => {
         const loadEvents = async () => {
             try {
-                await initializeEvents(EVENTS_DATA);
+                // Try to fetch from Firebase in the background
+                // We don't await initializeEvents here to avoid blocking if it takes time
+                initializeEvents(EVENTS_DATA).catch(err => console.warn("Background seed failed:", err));
+
                 const fetchedEvents = await getEvents();
-                // Use fetched events if available, otherwise fallback to mock data
-                setEvents(fetchedEvents.length > 0 ? fetchedEvents : EVENTS_DATA);
+                if (fetchedEvents && fetchedEvents.length > 0) {
+                    setEvents(fetchedEvents);
+                }
             } catch (error) {
-                console.error("Error loading events from Firebase, using mock data:", error);
-                // Fallback to mock data if Firebase fails
-                setEvents(EVENTS_DATA);
+                console.warn("Background fetch failed, keeping mock data:", error);
+                // No need to setEvents(EVENTS_DATA) because it's already the default
             }
         };
         loadEvents();
