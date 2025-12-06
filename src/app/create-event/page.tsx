@@ -34,7 +34,7 @@ const CONTRACT_ADDRESS = "0x0000000000000000000000000000000000000000"; // Placeh
 
 export default function CreateEventPage() {
     const router = useRouter();
-    const { isConnected } = useMockAccount();
+    const { isConnected, address } = useMockAccount();
     const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
     const [contractAddress, setContractAddress] = useState(CONTRACT_ADDRESS);
     const [formData, setFormData] = useState({
@@ -152,9 +152,16 @@ export default function CreateEventPage() {
                 transition={{ duration: 0.5 }}
                 className="flex-1"
             >
-                <div className="mb-8">
-                    <h1 className="text-4xl font-bold mb-2">Create Event</h1>
-                    <p className="text-muted-foreground">Launch your event on the blockchain in seconds.</p>
+                <div className="mb-8 flex items-center justify-between">
+                    <div>
+                        <h1 className="text-4xl font-bold mb-2">Create Event</h1>
+                        <p className="text-muted-foreground">Launch your event on the blockchain in seconds.</p>
+                    </div>
+                    {isConnected && (
+                        <div className="hidden md:block px-3 py-1 rounded-full bg-secondary/50 text-xs font-mono text-muted-foreground border">
+                            Connected: {address?.slice(0, 6)}...{address?.slice(-4)}
+                        </div>
+                    )}
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-6 bg-card border rounded-3xl p-8 shadow-sm">

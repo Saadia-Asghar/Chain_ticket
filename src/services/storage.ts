@@ -112,13 +112,9 @@ export const updateEvent = async (updatedEvent: Event) => {
 };
 
 export const getTickets = async (ownerAddress?: string): Promise<Ticket[]> => {
+    if (!ownerAddress) return [];
     try {
-        let q;
-        if (ownerAddress) {
-            q = query(collection(db, "tickets"), where("ownerAddress", "==", ownerAddress));
-        } else {
-            q = collection(db, "tickets");
-        }
+        const q = query(collection(db, "tickets"), where("ownerAddress", "==", ownerAddress));
         const querySnapshot = await getDocs(q);
         return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Ticket));
     } catch (error) {

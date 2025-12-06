@@ -66,7 +66,7 @@ export default function MyTicketsPage() {
                 </div>
             ) : (
                 <div className="text-center py-20">
-                    <p className="text-muted-foreground text-lg">No tickets found.</p>
+                    <p className="text-muted-foreground text-lg">No tickets found for {address?.slice(0, 6)}...{address?.slice(-4)}.</p>
                     <Button className="mt-4" asChild>
                         <a href="/events">Browse Events</a>
                     </Button>
