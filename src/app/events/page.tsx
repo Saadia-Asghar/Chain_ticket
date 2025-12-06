@@ -209,6 +209,22 @@ export default function EventsPage() {
                     filteredEvents.map((event, index) => (
                         <EventCard key={event.id} event={event} index={index} />
                     ))
+                ) : events.length === 0 ? (
+                    <div className="col-span-full text-center py-20">
+                        <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-secondary/50 mb-6">
+                            <Calendar className="w-10 h-10 text-muted-foreground" />
+                        </div>
+                        <h3 className="text-2xl font-bold mb-2">No Events Yet</h3>
+                        <p className="text-muted-foreground max-w-sm mx-auto mb-6">
+                            Be the first to create an event on ChainTicket+! Start building your community today.
+                        </p>
+                        <Link href="/create-event">
+                            <Button className="rounded-xl">
+                                <Ticket className="w-4 h-4 mr-2" />
+                                Create Your First Event
+                            </Button>
+                        </Link>
+                    </div>
                 ) : (
                     <div className="col-span-full text-center py-20">
                         <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-secondary/50 mb-6">

@@ -37,6 +37,8 @@ export default function CreateEventPage() {
     const { isConnected, address } = useMockAccount();
     const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
     const [contractAddress, setContractAddress] = useState(CONTRACT_ADDRESS);
+    const [isCreating, setIsCreating] = useState(false);
+    const [showSuccess, setShowSuccess] = useState(false);
     const [formData, setFormData] = useState({
         name: "",
         price: "",
@@ -87,59 +89,74 @@ export default function CreateEventPage() {
             return;
         }
 
-        // For demo purposes, we'll save to local storage even if contract interaction is mocked/fails
-        // In a real app, this would happen after successful transaction confirmation
+        // Set loading state
+        setIsCreating(true);
 
-        const newEvent: Event = {
-            id: Date.now().toString(),
-            name: formData.name,
-            description: "Event description placeholder", // Add description field to form if needed
-            date: new Date(formData.start).toLocaleDateString(),
-            time: new Date(formData.start).toLocaleTimeString(),
-            location: "TBD", // Add location field to form
-            city: "Online", // Add city field
-            country: "Global", // Add country field
-            price: formData.price,
-            supply: parseInt(formData.supply),
-            minted: 0,
-            organizer: "You", // Get from profile or wallet
-            organizerAddress: "0x...", // Get from wallet
-            image: "bg-gradient-to-br from-blue-600 to-purple-600", // Default or upload
-            category: "Conference" // Add category selector
-        };
+        try {
+            // For demo purposes, we'll save to local storage even if contract interaction is mocked/fails
+            // In a real app, this would happen after successful transaction confirmation
 
-        await saveEvent(newEvent);
+            const newEvent: Event = {
+                id: Date.now().toString(),
+                name: formData.name,
+                description: "Event description placeholder", // Add description field to form if needed
+                date: new Date(formData.start).toLocaleDateString(),
+                time: new Date(formData.start).toLocaleTimeString(),
+                location: "TBD", // Add location field to form
+                city: "Online", // Add city field
+                country: "Global", // Add country field
+                price: formData.price,
+                supply: parseInt(formData.supply),
+                minted: 0,
+                organizer: "You", // Get from profile or wallet
+                organizerAddress: address || "0x...", // Get from wallet
+                image: "bg-gradient-to-br from-blue-600 to-purple-600", // Default or upload
+                category: "Conference" // Add category selector
+            };
 
-        // Simulate contract write for now if address is placeholder
-        if (contractAddress === "0x0000000000000000000000000000000000000000") {
-            setTimeout(() => {
-                router.push("/organizer");
-            }, 1000);
-            return;
+            await saveEvent(newEvent);
+
+            // Show success message
+            setShowSuccess(true);
+            setIsCreating(false);
+
+            // Simulate contract write for now if address is placeholder
+            if (contractAddress === "0x0000000000000000000000000000000000000000") {
+                // Redirect after showing success message
+                setTimeout(() => {
+                    router.push("/organizer");
+                }, 2000);
+                return;
+            }
+
+            // Validate contract address
+            if (!contractAddress || contractAddress === "0x0000000000000000000000000000000000000000") {
+                alert("Please enter a valid contract address.");
+                setIsCreating(false);
+                return;
+            }
+
+            const startTimestamp = Math.floor(new Date(formData.start).getTime() / 1000);
+            const endTimestamp = Math.floor(new Date(formData.end).getTime() / 1000);
+
+            writeContract({
+                address: contractAddress as `0x${string}`,
+                abi: ChainTicketPlusABI,
+                functionName: "createEvent",
+                args: [
+                    formData.name,
+                    parseEther(formData.price),
+                    BigInt(formData.supply),
+                    BigInt(startTimestamp),
+                    BigInt(endTimestamp),
+                    BigInt(formData.maxTransfers),
+                ],
+            });
+        } catch (error) {
+            console.error("Error creating event:", error);
+            setIsCreating(false);
+            alert("Failed to create event. Please try again.");
         }
-
-        // Validate contract address
-        if (!contractAddress || contractAddress === "0x0000000000000000000000000000000000000000") {
-            alert("Please enter a valid contract address.");
-            return;
-        }
-
-        const startTimestamp = Math.floor(new Date(formData.start).getTime() / 1000);
-        const endTimestamp = Math.floor(new Date(formData.end).getTime() / 1000);
-
-        writeContract({
-            address: contractAddress as `0x${string}`,
-            abi: ChainTicketPlusABI,
-            functionName: "createEvent",
-            args: [
-                formData.name,
-                parseEther(formData.price),
-                BigInt(formData.supply),
-                BigInt(startTimestamp),
-                BigInt(endTimestamp),
-                BigInt(formData.maxTransfers),
-            ],
-        });
     };
 
     return (
@@ -272,9 +289,49 @@ export default function CreateEventPage() {
                         <p className="text-xs text-muted-foreground">Set to 0 to make tickets non-transferable (Soulbound).</p>
                     </div>
 
-                    <Button type="submit" className="w-full h-14 text-lg rounded-xl mt-4" disabled={isPending || isConfirming}>
-                        {isPending ? "Creating Event..." : isConfirming ? "Confirming..." : "Create Event"} <ArrowRight className="ml-2 w-5 h-5" />
+                    <Button
+                        type="submit"
+                        className="w-full h-14 text-lg rounded-xl mt-4"
+                        disabled={isCreating || isPending || isConfirming || showSuccess}
+                    >
+                        {isCreating ? (
+                            <>
+                                <motion.div
+                                    animate={{ rotate: 360 }}
+                                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                    className="w-5 h-5 border-2 border-white border-t-transparent rounded-full mr-2"
+                                />
+                                Creating Event...
+                            </>
+                        ) : showSuccess ? (
+                            <>
+                                <CheckCircle2 className="w-5 h-5 mr-2" />
+                                Event Created! Redirecting...
+                            </>
+                        ) : isPending ? (
+                            "Creating Event..."
+                        ) : isConfirming ? (
+                            "Confirming..."
+                        ) : (
+                            <>
+                                Create Event <ArrowRight className="ml-2 w-5 h-5" />
+                            </>
+                        )}
                     </Button>
+
+                    {showSuccess && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="p-4 bg-green-500/10 border border-green-500/20 text-green-600 rounded-xl flex items-center gap-3"
+                        >
+                            <CheckCircle2 className="w-5 h-5" />
+                            <div>
+                                <p className="font-semibold">Event created successfully!</p>
+                                <p className="text-sm text-muted-foreground">Redirecting to your dashboard...</p>
+                            </div>
+                        </motion.div>
+                    )}
 
                     {isSuccess && (
                         <motion.div
