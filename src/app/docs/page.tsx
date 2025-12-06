@@ -1,9 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { Book, Code, Wallet, Ticket, Shield, Zap, ArrowRight, ExternalLink } from "lucide-react";
+import { Book, Wallet, Ticket, Shield, Zap, ArrowRight, ExternalLink, MessageSquare, Send, Check } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function DocumentationPage() {
     return (
@@ -14,7 +18,7 @@ export default function DocumentationPage() {
                 className="mb-12 text-center"
             >
                 <h1 className="text-5xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600">
-                    Documentation
+                    Help & Support
                 </h1>
                 <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
                     Everything you need to know about ChainTicket+ - Pakistan's first decentralized anti-fraud ticketing protocol
@@ -139,57 +143,40 @@ export default function DocumentationPage() {
                 </div>
             </section>
 
-            {/* Technical Documentation */}
-            <section className="mb-16">
-                <h2 className="text-3xl font-bold mb-6 flex items-center gap-3">
-                    <Code className="w-8 h-8 text-primary" />
-                    Technical Documentation
-                </h2>
+            {/* Contact / Chat Section (Replaces Technical Docs) */}
+            <section className="mb-16" id="contact">
+                <div className="bg-gradient-to-br from-primary/5 to-purple-500/10 border rounded-[2.5rem] p-8 md:p-12 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <TechCard
-                        title="Smart Contract"
-                        description="ChainTicket+ is built on Base Sepolia testnet using ERC-721 standard for NFT tickets"
-                        items={[
-                            "Contract Address: 0x...",
-                            "Network: Base Sepolia",
-                            "Standard: ERC-721",
-                            "Verified on Basescan"
-                        ]}
-                    />
+                    <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+                        <div>
+                            <div className="w-16 h-16 bg-primary/20 rounded-2xl flex items-center justify-center mb-6 text-primary">
+                                <MessageSquare className="w-8 h-8" />
+                            </div>
+                            <h2 className="text-3xl font-bold mb-4">Have Questions?</h2>
+                            <p className="text-lg text-muted-foreground mb-6">
+                                Can't find what you're looking for? Leave a message for our team and we'll get back to you via email.
+                            </p>
+                            <ul className="space-y-4">
+                                <li className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center text-green-600">
+                                        <Check className="w-4 h-4" />
+                                    </div>
+                                    <span>24/7 Priority Support</span>
+                                </li>
+                                <li className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center text-green-600">
+                                        <Check className="w-4 h-4" />
+                                    </div>
+                                    <span>Direct Email Response</span>
+                                </li>
+                            </ul>
+                        </div>
 
-                    <TechCard
-                        title="Technology Stack"
-                        description="Modern Web3 stack for optimal performance and security"
-                        items={[
-                            "Frontend: Next.js 16 + React 19",
-                            "Blockchain: Base (Ethereum L2)",
-                            "Web3 Library: Wagmi + Viem",
-                            "Styling: TailwindCSS"
-                        ]}
-                    />
-
-                    <TechCard
-                        title="Security Features"
-                        description="Multiple layers of security to prevent fraud"
-                        items={[
-                            "Blockchain-based ticket ownership",
-                            "Immutable ticket records",
-                            "QR code verification",
-                            "One-time use enforcement"
-                        ]}
-                    />
-
-                    <TechCard
-                        title="API & Integration"
-                        description="Developer-friendly APIs for custom integrations"
-                        items={[
-                            "REST API for event data",
-                            "WebSocket for real-time updates",
-                            "Webhook support",
-                            "GraphQL endpoint (coming soon)"
-                        ]}
-                    />
+                        <div className="bg-card rounded-2xl p-6 shadow-xl border">
+                            <ContactForm />
+                        </div>
+                    </div>
                 </div>
             </section>
 
@@ -249,6 +236,54 @@ export default function DocumentationPage() {
     );
 }
 
+function ContactForm() {
+    const [status, setStatus] = useState<"idle" | "submitting" | "success">("idle");
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setStatus("submitting");
+        // Simulate API call
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        setStatus("success");
+        // Reset after 3 seconds
+        setTimeout(() => setStatus("idle"), 3000);
+    };
+
+    if (status === "success") {
+        return (
+            <div className="h-full flex flex-col items-center justify-center text-center py-12 space-y-4">
+                <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center text-green-600 mb-2">
+                    <Check className="w-8 h-8" />
+                </div>
+                <h3 className="text-xl font-bold">Message Sent!</h3>
+                <p className="text-muted-foreground">We'll get back to you shortly.</p>
+                <Button variant="outline" onClick={() => setStatus("idle")}>Send another</Button>
+            </div>
+        );
+    }
+
+    return (
+        <form onSubmit={handleSubmit} className="space-y-4">
+            <h3 className="text-lg font-bold">Send a Message</h3>
+            <div className="space-y-2">
+                <Label htmlFor="email">Your Email</Label>
+                <Input id="email" type="email" placeholder="john@example.com" required />
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="question">Question / Feedback</Label>
+                <Textarea id="question" placeholder="How can we improve?" rows={4} required />
+            </div>
+            <Button type="submit" className="w-full" disabled={status === "submitting"}>
+                {status === "submitting" ? (
+                    "Sending..."
+                ) : (
+                    <>Send to Support Team <Send className="w-4 h-4 ml-2" /></>
+                )}
+            </Button>
+        </form>
+    );
+}
+
 function QuickStartCard({ number, title, description, icon }: { number: string; title: string; description: string; icon: React.ReactNode }) {
     return (
         <motion.div
@@ -280,23 +315,6 @@ function DocSection({ title, content }: { title: string; content: string[] }) {
                     <li key={index} className="flex items-start gap-2">
                         <ArrowRight className="w-4 h-4 mt-1 text-primary flex-shrink-0" />
                         <span>{item}</span>
-                    </li>
-                ))}
-            </ul>
-        </div>
-    );
-}
-
-function TechCard({ title, description, items }: { title: string; description: string; items: string[] }) {
-    return (
-        <div className="bg-card border rounded-2xl p-6 hover:shadow-lg transition-all">
-            <h3 className="text-xl font-bold mb-2">{title}</h3>
-            <p className="text-sm text-muted-foreground mb-4">{description}</p>
-            <ul className="space-y-2">
-                {items.map((item, index) => (
-                    <li key={index} className="flex items-center gap-2 text-sm">
-                        <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                        {item}
                     </li>
                 ))}
             </ul>
