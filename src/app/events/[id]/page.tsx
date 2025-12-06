@@ -296,23 +296,40 @@ export default function EventDetailsPage() {
                         .map((similarEvent) => (
                             <Link href={`/events/${similarEvent.id}`} key={similarEvent.id} className="block h-full w-full">
                                 <motion.div
-                                    whileHover={{ y: -5 }}
-                                    className="bg-card border rounded-2xl overflow-hidden hover:shadow-xl transition-all h-full flex flex-col w-full"
+                                    whileHover={{ y: -8 }}
+                                    className="group h-full bg-card border rounded-3xl overflow-hidden hover:shadow-2xl hover:shadow-primary/10 transition-all duration-300 flex flex-col w-full"
                                 >
-                                    <div className={`h-40 ${similarEvent.image} bg-cover bg-center w-full`} />
-                                    <div className="p-5 flex flex-col flex-grow w-full">
-                                        <h3 className="font-bold text-lg mb-2 line-clamp-1">{similarEvent.name}</h3>
-                                        <div className="space-y-2 text-sm text-muted-foreground mb-4 flex-grow">
-                                            <div className="flex items-center gap-2">
-                                                <Calendar className="w-4 h-4 flex-shrink-0" /> <span className="truncate">{similarEvent.date}</span>
+                                    <div className={`h-48 ${similarEvent.image} bg-cover bg-center relative overflow-hidden w-full`}>
+                                        <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
+                                        <div className="absolute top-4 right-4 bg-white/20 backdrop-blur-md text-white text-xs font-bold px-3 py-1 rounded-full border border-white/20">
+                                            {similarEvent.category}
+                                        </div>
+                                    </div>
+
+                                    <div className="p-6 flex flex-col flex-grow w-full">
+                                        <h3 className="text-xl font-bold mb-3 group-hover:text-primary transition-colors line-clamp-1">
+                                            {similarEvent.name}
+                                        </h3>
+
+                                        <div className="space-y-3 mb-6 flex-grow">
+                                            <div className="flex items-center text-muted-foreground text-sm">
+                                                <Calendar className="w-4 h-4 mr-2 text-primary/70 flex-shrink-0" />
+                                                <span className="truncate">{similarEvent.date}</span>
                                             </div>
-                                            <div className="flex items-center gap-2">
-                                                <MapPin className="w-4 h-4 flex-shrink-0" /> <span className="truncate">{similarEvent.city}, {similarEvent.country}</span>
+                                            <div className="flex items-center text-muted-foreground text-sm">
+                                                <MapPin className="w-4 h-4 mr-2 text-primary/70 flex-shrink-0" />
+                                                <span className="truncate">{similarEvent.city}, {similarEvent.country}</span>
                                             </div>
                                         </div>
-                                        <div className="pt-4 border-t flex justify-between items-center mt-auto w-full">
-                                            <span className="font-bold text-primary whitespace-nowrap">{similarEvent.price} ETH</span>
-                                            <span className="text-xs bg-secondary px-2 py-1 rounded whitespace-nowrap">{similarEvent.category}</span>
+
+                                        <div className="flex items-center justify-between pt-4 border-t mt-auto w-full">
+                                            <div className="flex flex-col">
+                                                <span className="text-xs text-muted-foreground uppercase tracking-wider">Price</span>
+                                                <span className="font-bold text-lg text-primary">{similarEvent.price} ETH</span>
+                                            </div>
+                                            <Button size="sm" className="rounded-full px-4 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                                                Get Ticket
+                                            </Button>
                                         </div>
                                     </div>
                                 </motion.div>
