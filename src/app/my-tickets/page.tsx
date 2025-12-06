@@ -29,7 +29,8 @@ export default function MyTicketsPage() {
 
     const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
 
-    if (!isConnected) {
+    // Strictly enforce connection and address presence
+    if (!isConnected || !address) {
         return (
             <div className="container mx-auto py-20 px-4 min-h-screen flex flex-col items-center justify-center text-center">
                 <motion.div
