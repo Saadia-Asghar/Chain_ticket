@@ -14,23 +14,6 @@ import { useRouter } from "next/navigation";
 import { saveEvent, Event } from "@/services/storage";
 import { useMockAccount } from "@/hooks/useMockAccount";
 
-const ChainTicketPlusABI = [
-    {
-        "inputs": [
-            { "internalType": "string", "name": "_name", "type": "string" },
-            { "internalType": "uint256", "name": "_price", "type": "uint256" },
-            { "internalType": "uint256", "name": "_supply", "type": "uint256" },
-            { "internalType": "uint256", "name": "_eventStart", "type": "uint256" },
-            { "internalType": "uint256", "name": "_eventEnd", "type": "uint256" },
-            { "internalType": "uint256", "name": "_maxTransfers", "type": "uint256" }
-        ],
-        "name": "createEvent",
-        "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    }
-] as const;
-
 export default function CreateEventPage() {
     const router = useRouter();
     const { isConnected, address } = useMockAccount();
@@ -97,6 +80,7 @@ export default function CreateEventPage() {
         setIsCreating(true);
 
         try {
+            console.log("Creating event:", formData);
             const newEvent: Event = {
                 id: Date.now().toString(),
                 name: formData.name,
@@ -111,20 +95,23 @@ export default function CreateEventPage() {
                 minted: 0,
                 organizer: "You",
                 organizerAddress: address || "0x...",
-                // Use the uploaded image, or a default gradient if none provided
                 image: formData.image || "bg-gradient-to-br from-blue-600 to-purple-600",
                 category: formData.category
             };
 
             await saveEvent(newEvent);
+            console.log("Event saved successfully:", newEvent);
 
-            // Redirect immediately to Browse Events
-            router.push("/events");
+            // Wait a moment for UX
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // Redirect to Organizer Dashboard
+            router.push("/organizer");
 
         } catch (error) {
             console.error("Error creating event:", error);
+            alert("Failed to create event. Please try again or check console.");
             setIsCreating(false);
-            alert("Failed to create event. Please try again.");
         }
     };
 
@@ -244,12 +231,27 @@ export default function CreateEventPage() {
                             <Label htmlFor="city">City</Label>
                             <Input
                                 id="city"
+                                list="cities"
                                 placeholder="e.g. Lahore"
                                 required
                                 className="h-12 rounded-xl"
                                 value={formData.city}
                                 onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                             />
+                            <datalist id="cities">
+                                <option value="Lahore" />
+                                <option value="Karachi" />
+                                <option value="Islamabad" />
+                                <option value="New York" />
+                                <option value="London" />
+                                <option value="Dubai" />
+                                <option value="Singapore" />
+                                <option value="Tokyo" />
+                                <option value="San Francisco" />
+                                <option value="Berlin" />
+                                <option value="Paris" />
+                                <option value="Toronto" />
+                            </datalist>
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="country">Country</Label>
@@ -291,7 +293,7 @@ export default function CreateEventPage() {
 
                     <div className="space-y-2">
                         <Label htmlFor="description">Description</Label>
-                        <textarea
+                        <Textarea
                             id="description"
                             className="flex min-h-[80px] w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                             rows={4}

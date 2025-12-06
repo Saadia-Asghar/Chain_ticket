@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import { ModeToggle } from "@/components/ModeToggle";
 import { Wallet } from "lucide-react";
 import { WalletModal } from "@/components/WalletModal";
+import { PreferencesModal } from "@/components/PreferencesModal";
 import { useMockAccount } from "@/hooks/useMockAccount";
 import { useFirebaseUser } from "@/hooks/useFirebaseUser";
 
@@ -16,10 +17,22 @@ export function Navbar() {
     const { disconnect } = useDisconnect();
     const [mounted, setMounted] = useState(false);
     const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
+    const [isPrefModalOpen, setIsPrefModalOpen] = useState(false);
 
     useEffect(() => {
         setMounted(true);
     }, []);
+
+    useEffect(() => {
+        if (isConnected && mounted && typeof window !== 'undefined') {
+            const hasLocation = localStorage.getItem("user_location");
+            if (!hasLocation) {
+                // Short delay to allow wallet modal to close/animation to finish
+                const timer = setTimeout(() => setIsPrefModalOpen(true), 1000);
+                return () => clearTimeout(timer);
+            }
+        }
+    }, [isConnected, mounted]);
 
     const handleDisconnect = () => {
         if (isMockConnected) {
@@ -54,6 +67,9 @@ export function Navbar() {
                     <Link href="/events" className="text-sm font-medium hover:text-primary transition-colors hidden md:block">
                         Browse Events
                     </Link>
+                    <Link href="/verify" className="text-sm font-medium hover:text-primary transition-colors hidden md:block">
+                        Verify Ticket
+                    </Link>
 
                     {isConnected ? (
                         <div className="flex items-center gap-2 bg-secondary/50 pl-3 pr-1 py-1 rounded-full border">
@@ -81,6 +97,11 @@ export function Navbar() {
             <WalletModal
                 isOpen={isWalletModalOpen}
                 onClose={() => setIsWalletModalOpen(false)}
+            />
+
+            <PreferencesModal
+                isOpen={isPrefModalOpen}
+                onClose={() => setIsPrefModalOpen(false)}
             />
         </>
     );
