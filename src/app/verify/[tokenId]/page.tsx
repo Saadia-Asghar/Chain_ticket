@@ -283,8 +283,8 @@ export default function VerifyPage() {
                                             <Button
                                                 size="lg"
                                                 className={`w-full text-white rounded-xl h-16 text-xl font-bold transition-all ${showPinInput
-                                                        ? "bg-primary hover:bg-primary/90"
-                                                        : "bg-green-600 hover:bg-green-700 shadow-lg shadow-green-600/20 hover:shadow-green-600/40 hover:-translate-y-1"
+                                                    ? "bg-primary hover:bg-primary/90"
+                                                    : "bg-green-600 hover:bg-green-700 shadow-lg shadow-green-600/20 hover:shadow-green-600/40 hover:-translate-y-1"
                                                     }`}
                                                 onClick={handleValidateClick}
                                                 disabled={isPending || isSuccess || manualVerificationSuccess}
@@ -333,10 +333,15 @@ export default function VerifyPage() {
                                             Token ID: <span className="font-mono font-bold text-foreground mx-2">#{tokenIdStr}</span>
                                         </p>
                                     </div>
-                                    <div className="mt-8">
+                                    <div className="mt-8 flex flex-col md:flex-row gap-4 justify-center">
                                         <Button variant="outline" onClick={() => window.location.reload()}>
                                             Try Again
                                         </Button>
+                                        <Link href="/verify">
+                                            <Button className="gap-2">
+                                                <QrCode className="w-4 h-4" /> Scan Another Ticket
+                                            </Button>
+                                        </Link>
                                     </div>
                                 </>
                             )}
