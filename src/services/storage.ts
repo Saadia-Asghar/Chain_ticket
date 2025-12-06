@@ -32,7 +32,7 @@ export interface Ticket {
     isUsed: boolean;
 }
 
-export const getEvents = async (): Promise<Event[]> => {
+export async function getEvents(): Promise<Event[]> {
     try {
         // Check if we're in a browser environment
         if (typeof window === 'undefined') {
@@ -80,9 +80,9 @@ export const getEvents = async (): Promise<Event[]> => {
         }
         return EVENTS_DATA;
     }
-};
+}
 
-export const getEventById = async (id: string): Promise<Event | undefined> => {
+export async function getEventById(id: string): Promise<Event | undefined> {
     // 0. Check Mock Data FIRST (Fastest and relies on static data)
     const mockEvent = EVENTS_DATA.find(e => e.id === id);
     if (mockEvent) return mockEvent;
@@ -108,9 +108,9 @@ export const getEventById = async (id: string): Promise<Event | undefined> => {
         console.error("Error fetching event from Firebase:", error);
         return undefined;
     }
-};
+}
 
-export const saveEvent = async (event: Event) => {
+export async function saveEvent(event: Event) {
     try {
         if (typeof window !== 'undefined') {
             const localEvents = JSON.parse(localStorage.getItem('local_events') || '[]');
@@ -129,9 +129,9 @@ export const saveEvent = async (event: Event) => {
     } catch (error) {
         console.error("Error saving event:", error);
     }
-};
+}
 
-export const updateEvent = async (updatedEvent: Event) => {
+export async function updateEvent(updatedEvent: Event) {
     try {
         if (typeof window !== 'undefined') {
             const localEvents = JSON.parse(localStorage.getItem('local_events') || '[]');
@@ -148,9 +148,9 @@ export const updateEvent = async (updatedEvent: Event) => {
     } catch (error) {
         console.error("Error updating event:", error);
     }
-};
+}
 
-export const getTickets = async (ownerAddress?: string): Promise<Ticket[]> => {
+export async function getTickets(ownerAddress?: string): Promise<Ticket[]> {
     if (!ownerAddress) return [];
 
     let tickets: Ticket[] = [];
@@ -177,9 +177,9 @@ export const getTickets = async (ownerAddress?: string): Promise<Ticket[]> => {
         console.error("Error fetching tickets:", error);
         return tickets;
     }
-};
+}
 
-export const getTicketById = async (ticketId: string): Promise<Ticket | undefined> => {
+export async function getTicketById(ticketId: string): Promise<Ticket | undefined> {
     if (typeof window !== 'undefined') {
         const localTickets = JSON.parse(localStorage.getItem('local_tickets') || '[]');
         const localTicket = localTickets.find((t: Ticket) => t.id === ticketId);
@@ -197,9 +197,9 @@ export const getTicketById = async (ticketId: string): Promise<Ticket | undefine
         console.error("Error fetching ticket:", error);
         return undefined;
     }
-};
+}
 
-export const updateTicket = async (updatedTicket: Ticket) => {
+export async function updateTicket(updatedTicket: Ticket) {
     try {
         if (typeof window !== 'undefined') {
             const localTickets = JSON.parse(localStorage.getItem('local_tickets') || '[]');
@@ -221,9 +221,9 @@ export const updateTicket = async (updatedTicket: Ticket) => {
     } catch (error) {
         console.error("Error updating ticket:", error);
     }
-};
+}
 
-export const saveTicket = async (ticket: Ticket) => {
+export async function saveTicket(ticket: Ticket) {
     try {
         if (typeof window !== 'undefined') {
             const localTickets = JSON.parse(localStorage.getItem('local_tickets') || '[]');
@@ -236,9 +236,9 @@ export const saveTicket = async (ticket: Ticket) => {
     } catch (error) {
         console.error("Error saving ticket:", error);
     }
-};
+}
 
-export const initializeEvents = async (initialEvents: Event[]) => {
+export async function initializeEvents(initialEvents: Event[]) {
     try {
         const querySnapshot = await getDocs(collection(db, "events"));
         if (querySnapshot.empty) {
@@ -250,4 +250,4 @@ export const initializeEvents = async (initialEvents: Event[]) => {
     } catch (error) {
         console.warn("Could not initialize events in Firebase:", error);
     }
-};
+}
