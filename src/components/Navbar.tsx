@@ -8,8 +8,10 @@ import { ModeToggle } from "@/components/ModeToggle";
 import { Wallet } from "lucide-react";
 import { WalletModal } from "@/components/WalletModal";
 import { useMockAccount } from "@/hooks/useMockAccount";
+import { useFirebaseUser } from "@/hooks/useFirebaseUser";
 
 export function Navbar() {
+    useFirebaseUser(); // Sync user to Firebase
     const { address, isConnected, isMockConnected, disconnectMock } = useMockAccount();
     const { disconnect } = useDisconnect();
     const [mounted, setMounted] = useState(false);

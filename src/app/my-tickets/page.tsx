@@ -4,29 +4,14 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { QrCode, Calendar, MapPin, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-import { EVENTS_DATA } from "@/data/mockData";
 import { useMockAccount } from "@/hooks/useMockAccount";
 
-const MY_TICKETS = [
-    {
-        id: "101",
-        eventId: "1",
-        ...EVENTS_DATA.find(e => e.id === "1"),
-        qrCode: `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent('http://localhost:3000/verify/101')}`,
-        status: "Valid"
-    },
-    {
-        id: "102",
-        eventId: "2",
-        ...EVENTS_DATA.find(e => e.id === "2"),
-        qrCode: `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent('http://localhost:3000/verify/102')}`,
-        status: "Used"
-    }
-];
+
 
 export default function MyTicketsPage() {
     const { isConnected } = useMockAccount();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [tickets, setTickets] = useState<any[]>([]);
 
     if (!isConnected) {
         return (
@@ -60,9 +45,9 @@ export default function MyTicketsPage() {
                 <p className="text-muted-foreground">Manage your tickets and view QR codes for entry.</p>
             </motion.div>
 
-            {MY_TICKETS.length > 0 ? (
+            {tickets.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {MY_TICKETS.map((ticket, index) => (
+                    {tickets.map((ticket, index) => (
                         <TicketFlipCard key={ticket.id} ticket={ticket} index={index} />
                     ))}
                 </div>
