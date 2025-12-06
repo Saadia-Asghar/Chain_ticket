@@ -1,0 +1,7 @@
+1:"$Sreact.fragment"
+2:I[97367,["/_next/static/chunks/cb189e8368b88c3f.js","/_next/static/chunks/e38548872c274950.js","/_next/static/chunks/8881882eb68793e4.js","/_next/static/chunks/6075cd8c4bb85b47.js","/_next/static/chunks/0f94960e86131f0d.js","/_next/static/chunks/c358aceaa4a41bc7.js","/_next/static/chunks/3b8c50fa88bd3fd9.js","/_next/static/chunks/f998f5b46b200114.js","/_next/static/chunks/247eb132b7f7b574.js"],"ViewportBoundary"]
+4:I[97367,["/_next/static/chunks/cb189e8368b88c3f.js","/_next/static/chunks/e38548872c274950.js","/_next/static/chunks/8881882eb68793e4.js","/_next/static/chunks/6075cd8c4bb85b47.js","/_next/static/chunks/0f94960e86131f0d.js","/_next/static/chunks/c358aceaa4a41bc7.js","/_next/static/chunks/3b8c50fa88bd3fd9.js","/_next/static/chunks/f998f5b46b200114.js","/_next/static/chunks/247eb132b7f7b574.js"],"MetadataBoundary"]
+5:"$Sreact.suspense"
+0:{"buildId":"9o6142pa7rQ4rrvqXStoH","rsc":["$","$1","h",{"children":[["$","meta",null,{"name":"robots","content":"noindex"}],["$","$L2",null,{"children":"$@3"}],["$","div",null,{"hidden":true,"children":["$","$L4",null,{"children":["$","$5",null,{"name":"Next.Metadata","children":"$@6"}]}]}],["$","meta",null,{"name":"next-size-adjust","content":""}]]}],"loading":null,"isPartial":false}
+3:[["$","meta","0",{"charSet":"utf-8"}],["$","meta","1",{"name":"viewport","content":"width=device-width, initial-scale=1"}]]
+6:[["$","title","0",{"children":"ChainTicket+"}],["$","meta","1",{"name":"description","content":"Pakistan’s On-Chain Anti-Fraud Ticketing Protocol"}]]

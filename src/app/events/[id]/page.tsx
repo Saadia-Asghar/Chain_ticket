@@ -294,25 +294,25 @@ export default function EventDetailsPage() {
                         .filter(e => e.category === event.category && e.id !== event.id)
                         .slice(0, 3)
                         .map((similarEvent) => (
-                            <Link href={`/events/${similarEvent.id}`} key={similarEvent.id}>
+                            <Link href={`/events/${similarEvent.id}`} key={similarEvent.id} className="block h-full w-full">
                                 <motion.div
                                     whileHover={{ y: -5 }}
-                                    className="bg-card border rounded-2xl overflow-hidden hover:shadow-xl transition-all h-full flex flex-col"
+                                    className="bg-card border rounded-2xl overflow-hidden hover:shadow-xl transition-all h-full flex flex-col w-full"
                                 >
-                                    <div className={`h-40 ${similarEvent.image} bg-cover bg-center`} />
-                                    <div className="p-5 flex flex-col flex-grow">
+                                    <div className={`h-40 ${similarEvent.image} bg-cover bg-center w-full`} />
+                                    <div className="p-5 flex flex-col flex-grow w-full">
                                         <h3 className="font-bold text-lg mb-2 line-clamp-1">{similarEvent.name}</h3>
                                         <div className="space-y-2 text-sm text-muted-foreground mb-4 flex-grow">
                                             <div className="flex items-center gap-2">
-                                                <Calendar className="w-4 h-4" /> {similarEvent.date}
+                                                <Calendar className="w-4 h-4 flex-shrink-0" /> <span className="truncate">{similarEvent.date}</span>
                                             </div>
                                             <div className="flex items-center gap-2">
-                                                <MapPin className="w-4 h-4" /> {similarEvent.city}, {similarEvent.country}
+                                                <MapPin className="w-4 h-4 flex-shrink-0" /> <span className="truncate">{similarEvent.city}, {similarEvent.country}</span>
                                             </div>
                                         </div>
-                                        <div className="pt-4 border-t flex justify-between items-center mt-auto">
-                                            <span className="font-bold text-primary">{similarEvent.price} ETH</span>
-                                            <span className="text-xs bg-secondary px-2 py-1 rounded">{similarEvent.category}</span>
+                                        <div className="pt-4 border-t flex justify-between items-center mt-auto w-full">
+                                            <span className="font-bold text-primary whitespace-nowrap">{similarEvent.price} ETH</span>
+                                            <span className="text-xs bg-secondary px-2 py-1 rounded whitespace-nowrap">{similarEvent.category}</span>
                                         </div>
                                     </div>
                                 </motion.div>
