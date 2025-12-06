@@ -2,9 +2,6 @@
 
 **ChainTicket+** is a decentralized event ticketing platform built on the **Base** blockchain (Ethereum L2). It allows organizers to create events and mint NFT-based tickets, while offering users a seamless experience to purchase, manage, and verify their tickets using crypto wallets.
 
-![ChainTicket+ Demo](https://via.placeholder.com/800x400?text=ChainTicket++Hero+Image)
-*(Upgrade this with a real screenshot of your landing page)*
-
 ## 🚀 Key Features
 
 *   **🏆 DeFi Powered**: Tickets are minted as NFTs on the blockchain, ensuring authenticity and preventing fraud.
