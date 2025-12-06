@@ -99,12 +99,9 @@ export default function CreateEventPage() {
                 category: formData.category
             };
 
-            // Save with timeout to prevent hanging
-            const timeoutPromise = new Promise((_, reject) =>
-                setTimeout(() => reject(new Error("Request timed out")), 10000)
-            );
+            // Save event (Logic is now non-blocking in storage.ts)
+            await saveEvent(newEvent);
 
-            await Promise.race([saveEvent(newEvent), timeoutPromise]);
             console.log("Event saved successfully:", newEvent);
 
             // Wait a moment for UX
@@ -304,7 +301,7 @@ export default function CreateEventPage() {
                             rows={4}
                             required
                             value={formData.description}
-                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setFormData({ ...formData, description: e.target.value })}
                         />
                     </div>
 
