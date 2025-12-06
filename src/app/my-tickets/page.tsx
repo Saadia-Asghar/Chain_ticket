@@ -1,4 +1,6 @@
 "use client";
+// ChainTicket+ - Secure Blockchain Ticketing Platform
+// Last updated: 2025-12-06 - Force deployment
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
@@ -15,11 +17,15 @@ export default function MyTicketsPage() {
     const [tickets, setTickets] = useState<any[]>([]);
 
     useEffect(() => {
+        console.log('My Tickets - Connection State:', { isConnected, address });
         const fetchTickets = async () => {
             if (isConnected && address) {
+                console.log('Fetching tickets for address:', address);
                 const userTickets = await getTickets(address);
+                console.log('Fetched tickets:', userTickets);
                 setTickets(userTickets);
             } else {
+                console.log('Not connected or no address - clearing tickets');
                 setTickets([]);
             }
         };
