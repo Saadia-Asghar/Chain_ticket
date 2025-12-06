@@ -1,17 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { QrCode, Calendar, MapPin, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useMockAccount } from "@/hooks/useMockAccount";
-
+import { getTickets } from "@/services/storage";
 
 
 export default function MyTicketsPage() {
-    const { isConnected } = useMockAccount();
+    const { isConnected, address } = useMockAccount();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [tickets, setTickets] = useState<any[]>([]);
+
+    useEffect(() => {
+        const fetchTickets = async () => {
+            if (isConnected && address) {
+                const userTickets = await getTickets(address);
+                setTickets(userTickets);
+            } else {
+                setTickets([]);
+            }
+        };
+
+        fetchTickets();
+    }, [isConnected, address]);
 
     if (!isConnected) {
         return (

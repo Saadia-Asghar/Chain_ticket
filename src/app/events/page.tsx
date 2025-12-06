@@ -16,8 +16,12 @@ export default function EventsPage() {
     const [searchQuery, setSearchQuery] = useState("");
 
     useEffect(() => {
-        initializeEvents(EVENTS_DATA);
-        setEvents(getEvents());
+        const loadEvents = async () => {
+            await initializeEvents(EVENTS_DATA);
+            const fetchedEvents = await getEvents();
+            setEvents(fetchedEvents);
+        };
+        loadEvents();
     }, []);
     const [selectedCategory, setSelectedCategory] = useState("All");
     const [cityFilter, setCityFilter] = useState("");

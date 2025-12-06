@@ -15,18 +15,37 @@ import { WalletModal } from "@/components/WalletModal";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 // Mock Data Store - In a real app, this would be an API call
-import { EVENTS_DATA } from "@/data/mockData";
+import { saveTicket, getEventById, getEvents, Event } from "@/services/storage";
 
 export default function EventDetailsPage() {
     const params = useParams();
     const id = params.id as string;
-    const event = EVENTS_DATA.find(e => e.id === id);
-    const { isConnected } = useAccount();
-    const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
-    const [isShareModalOpen, setIsShareModalOpen] = useState(false);
-    const [isCopied, setIsCopied] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [successMessage, setSuccessMessage] = useState<string | null>(null);
+    const [event, setEvent] = useState<Event | null>(null);
+    const [similarEvents, setSimilarEvents] = useState<Event[]>([]);
+    const { isConnected, address } = useAccount();
+    // ... (rest of state)
+
+    useEffect(() => {
+        const fetchEventAndSimilar = async () => {
+            const fetchedEvent = await getEventById(id);
+            if (fetchedEvent) {
+                setEvent(fetchedEvent);
+
+                // Fetch all events to find similar ones
+                const allEvents = await getEvents();
+                const similar = allEvents
+                    .filter(e => e.category === fetchedEvent.category && e.id !== fetchedEvent.id)
+                    .slice(0, 3);
+                setSimilarEvents(similar);
+            }
+        };
+        fetchEventAndSimilar();
+    }, [id]);
+
+    // ... (rest of component)
+
+    // In the JSX:
+    // {similarEvents.map((similarEvent) => ( ... ))}
 
     const copyToClipboard = () => {
         navigator.clipboard.writeText(window.location.href);
@@ -82,12 +101,27 @@ export default function EventDetailsPage() {
     };
 
     useEffect(() => {
-        if (isConfirmed && hash) {
-            setSuccessMessage("Ticket minted successfully!");
-            setError(null);
-            // Optionally redirect or refresh data here
-        }
-    }, [isConfirmed, hash]);
+        const saveTicketToFirebase = async () => {
+            if (isConfirmed && hash && event && address) {
+                setSuccessMessage("Ticket minted successfully!");
+                setError(null);
+
+                await saveTicket({
+                    id: Date.now().toString(), // Or use a proper ID from the event log if possible
+                    eventId: event.id,
+                    eventName: event.name,
+                    eventDate: event.date,
+                    eventLocation: event.location,
+                    eventImage: event.image,
+                    qrData: `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`http://localhost:3000/verify/${Date.now()}`)}`,
+                    ownerAddress: address,
+                    isUsed: false
+                });
+                console.log("Ticket saved to Firebase");
+            }
+        };
+        saveTicketToFirebase();
+    }, [isConfirmed, hash, event, address]);
 
     if (!event) {
         return (
@@ -290,51 +324,48 @@ export default function EventDetailsPage() {
             <div className="container mx-auto px-4 pb-20">
                 <h2 className="text-2xl font-bold mb-8">Similar Events You Might Like</h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    {EVENTS_DATA
-                        .filter(e => e.category === event.category && e.id !== event.id)
-                        .slice(0, 3)
-                        .map((similarEvent) => (
-                            <Link href={`/events/${similarEvent.id}`} key={similarEvent.id} className="block h-full w-full">
-                                <motion.div
-                                    whileHover={{ y: -8 }}
-                                    className="group h-full bg-card border rounded-3xl overflow-hidden hover:shadow-2xl hover:shadow-primary/10 transition-all duration-300 flex flex-col w-full"
-                                >
-                                    <div className={`h-48 ${similarEvent.image} bg-cover bg-center relative overflow-hidden w-full`}>
-                                        <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
-                                        <div className="absolute top-4 right-4 bg-white/20 backdrop-blur-md text-white text-xs font-bold px-3 py-1 rounded-full border border-white/20">
-                                            {similarEvent.category}
+                    {similarEvents.map((similarEvent) => (
+                        <Link href={`/events/${similarEvent.id}`} key={similarEvent.id} className="block h-full w-full">
+                            <motion.div
+                                whileHover={{ y: -8 }}
+                                className="group h-full bg-card border rounded-3xl overflow-hidden hover:shadow-2xl hover:shadow-primary/10 transition-all duration-300 flex flex-col w-full"
+                            >
+                                <div className={`h-48 ${similarEvent.image} bg-cover bg-center relative overflow-hidden w-full`}>
+                                    <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
+                                    <div className="absolute top-4 right-4 bg-white/20 backdrop-blur-md text-white text-xs font-bold px-3 py-1 rounded-full border border-white/20">
+                                        {similarEvent.category}
+                                    </div>
+                                </div>
+
+                                <div className="p-6 flex flex-col flex-grow w-full">
+                                    <h3 className="text-xl font-bold mb-3 group-hover:text-primary transition-colors line-clamp-1">
+                                        {similarEvent.name}
+                                    </h3>
+
+                                    <div className="space-y-3 mb-6 flex-grow">
+                                        <div className="flex items-center text-muted-foreground text-sm">
+                                            <Calendar className="w-4 h-4 mr-2 text-primary/70 flex-shrink-0" />
+                                            <span className="truncate">{similarEvent.date}</span>
+                                        </div>
+                                        <div className="flex items-center text-muted-foreground text-sm">
+                                            <MapPin className="w-4 h-4 mr-2 text-primary/70 flex-shrink-0" />
+                                            <span className="truncate">{similarEvent.city}, {similarEvent.country}</span>
                                         </div>
                                     </div>
 
-                                    <div className="p-6 flex flex-col flex-grow w-full">
-                                        <h3 className="text-xl font-bold mb-3 group-hover:text-primary transition-colors line-clamp-1">
-                                            {similarEvent.name}
-                                        </h3>
-
-                                        <div className="space-y-3 mb-6 flex-grow">
-                                            <div className="flex items-center text-muted-foreground text-sm">
-                                                <Calendar className="w-4 h-4 mr-2 text-primary/70 flex-shrink-0" />
-                                                <span className="truncate">{similarEvent.date}</span>
-                                            </div>
-                                            <div className="flex items-center text-muted-foreground text-sm">
-                                                <MapPin className="w-4 h-4 mr-2 text-primary/70 flex-shrink-0" />
-                                                <span className="truncate">{similarEvent.city}, {similarEvent.country}</span>
-                                            </div>
+                                    <div className="flex items-center justify-between pt-4 border-t mt-auto w-full">
+                                        <div className="flex flex-col">
+                                            <span className="text-xs text-muted-foreground uppercase tracking-wider">Price</span>
+                                            <span className="font-bold text-lg text-primary">{similarEvent.price} ETH</span>
                                         </div>
-
-                                        <div className="flex items-center justify-between pt-4 border-t mt-auto w-full">
-                                            <div className="flex flex-col">
-                                                <span className="text-xs text-muted-foreground uppercase tracking-wider">Price</span>
-                                                <span className="font-bold text-lg text-primary">{similarEvent.price} ETH</span>
-                                            </div>
-                                            <Button size="sm" className="rounded-full px-4 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                                                Get Ticket
-                                            </Button>
-                                        </div>
+                                        <Button size="sm" className="rounded-full px-4 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                                            Get Ticket
+                                        </Button>
                                     </div>
-                                </motion.div>
-                            </Link>
-                        ))}
+                                </div>
+                            </motion.div>
+                        </Link>
+                    ))}
                 </div>
             </div>
 

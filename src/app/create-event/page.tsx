@@ -51,7 +51,7 @@ export default function CreateEventPage() {
         hash,
     });
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
         // Check if wallet is connected
@@ -81,7 +81,7 @@ export default function CreateEventPage() {
             category: "Conference" // Add category selector
         };
 
-        saveEvent(newEvent);
+        await saveEvent(newEvent);
 
         // Simulate contract write for now if address is placeholder
         if (contractAddress === "0x0000000000000000000000000000000000000000") {

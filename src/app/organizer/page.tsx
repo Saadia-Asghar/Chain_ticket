@@ -14,7 +14,11 @@ export default function OrganizerDashboard() {
     const [events, setEvents] = useState<Event[]>([]);
 
     useEffect(() => {
-        setEvents(getEvents());
+        const fetchEvents = async () => {
+            const allEvents = await getEvents();
+            setEvents(allEvents);
+        };
+        fetchEvents();
     }, []);
 
     // In a real app, we would filter by the connected wallet address
