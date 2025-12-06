@@ -1,5 +1,6 @@
 import { db } from "@/lib/firebase";
 import { collection, addDoc, getDocs, query, where, updateDoc, doc, setDoc, getDoc } from "firebase/firestore";
+import { EVENTS_DATA } from "@/data/mockData";
 
 export interface Event {
     id: string;
@@ -35,57 +36,77 @@ export const getEvents = async (): Promise<Event[]> => {
     try {
         // Check if we're in a browser environment
         if (typeof window === 'undefined') {
-            return [];
+            return EVENTS_DATA; // Server-side fallback
         }
 
         // Fetch from Firebase
         const querySnapshot = await getDocs(collection(db, "events"));
         const firebaseEvents = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Event));
 
-        // Merge with local events
+        // Get local events
         const localEvents = JSON.parse(localStorage.getItem('local_events') || '[]');
 
-        // Combine, preferring Firebase if ID matches (deduplicate)
-        const combinedEvents = [...firebaseEvents];
-        localEvents.forEach((localEvent: Event) => {
-            if (!combinedEvents.find(e => e.id === localEvent.id)) {
-                combinedEvents.push(localEvent);
+        // Start with Mock Data
+        const allEvents = [...EVENTS_DATA];
+
+        // Merge Firebase Events (override mock if same ID)
+        firebaseEvents.forEach(fbEvent => {
+            const index = allEvents.findIndex(e => e.id === fbEvent.id);
+            if (index !== -1) {
+                allEvents[index] = fbEvent;
+            } else {
+                allEvents.push(fbEvent);
             }
         });
 
-        return combinedEvents;
+        // Merge Local Storage Events (override all if same ID)
+        localEvents.forEach((localEvent: Event) => {
+            const index = allEvents.findIndex(e => e.id === localEvent.id);
+            if (index !== -1) {
+                allEvents[index] = localEvent;
+            } else {
+                allEvents.push(localEvent);
+            }
+        });
+
+        return allEvents;
     } catch (error) {
         console.warn("Firebase not available, using fallback data:", error);
-        // Fallback to local storage only
+        // Fallback to local storage + mock data
         if (typeof window !== 'undefined') {
-            return JSON.parse(localStorage.getItem('local_events') || '[]');
+            const localEvents = JSON.parse(localStorage.getItem('local_events') || '[]');
+            return [...EVENTS_DATA, ...localEvents].filter((v, i, a) => a.findIndex(t => (t.id === v.id)) === i);
         }
-        return [];
+        return EVENTS_DATA;
     }
 };
 
 export const getEventById = async (id: string): Promise<Event | undefined> => {
+    // 1. Check Local Storage first (fastest and contains user-created events)
+    if (typeof window !== 'undefined') {
+        const localEvents = JSON.parse(localStorage.getItem('local_events') || '[]');
+        const localEvent = localEvents.find((e: Event) => e.id === id);
+        if (localEvent) return localEvent;
+    }
+
+    // 2. Check Mock Data
+    const mockEvent = EVENTS_DATA.find(e => e.id === id);
+
     try {
+        // 3. Check Firebase
         const docRef = doc(db, "events", id);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
             return { id: docSnap.id, ...docSnap.data() } as Event;
-        } else {
-            // Fallback to local storage
-            if (typeof window !== 'undefined') {
-                const localEvents = JSON.parse(localStorage.getItem('local_events') || '[]');
-                return localEvents.find((e: Event) => e.id === id);
-            }
-            return undefined;
         }
+
+        // If not in Firebase, return standard mock event if found
+        return mockEvent;
+
     } catch (error) {
         console.error("Error fetching event from Firebase:", error);
-        // Fallback to local storage
-        if (typeof window !== 'undefined') {
-            const localEvents = JSON.parse(localStorage.getItem('local_events') || '[]');
-            return localEvents.find((e: Event) => e.id === id);
-        }
-        return undefined;
+        // Fallback to mock data if Firebase fails
+        return mockEvent;
     }
 };
 
@@ -94,15 +115,16 @@ export const saveEvent = async (event: Event) => {
         // Save to Local Storage first for instant update
         if (typeof window !== 'undefined') {
             const localEvents = JSON.parse(localStorage.getItem('local_events') || '[]');
-            localEvents.push(event);
-            localStorage.setItem('local_events', JSON.stringify(localEvents));
+            // Remove existing if updating
+            const filtered = localEvents.filter((e: Event) => e.id !== event.id);
+            filtered.push(event);
+            localStorage.setItem('local_events', JSON.stringify(filtered));
 
             // Dispatch a custom event to notify listeners (like the Events page)
             window.dispatchEvent(new Event('eventsUpdated'));
         }
 
         // Use setDoc with the event ID to ensure we can easily reference it, or addDoc for auto-ID
-        // Here we use the event.id as the document ID if it exists, otherwise addDoc
         if (event.id) {
             await setDoc(doc(db, "events", event.id), event);
         } else {
@@ -116,6 +138,17 @@ export const saveEvent = async (event: Event) => {
 
 export const updateEvent = async (updatedEvent: Event) => {
     try {
+        // Update Local Storage
+        if (typeof window !== 'undefined') {
+            const localEvents = JSON.parse(localStorage.getItem('local_events') || '[]');
+            const index = localEvents.findIndex((e: Event) => e.id === updatedEvent.id);
+            if (index !== -1) {
+                localEvents[index] = updatedEvent;
+                localStorage.setItem('local_events', JSON.stringify(localEvents));
+                window.dispatchEvent(new Event('eventsUpdated'));
+            }
+        }
+
         const eventRef = doc(db, "events", updatedEvent.id);
         await updateDoc(eventRef, { ...updatedEvent });
         console.log("Event updated in Firebase:", updatedEvent);
@@ -126,18 +159,48 @@ export const updateEvent = async (updatedEvent: Event) => {
 
 export const getTickets = async (ownerAddress?: string): Promise<Ticket[]> => {
     if (!ownerAddress) return [];
+
+    let tickets: Ticket[] = [];
+
+    // 1. Get from Local Storage
+    if (typeof window !== 'undefined') {
+        const localTickets = JSON.parse(localStorage.getItem('local_tickets') || '[]');
+        const userLocalTickets = localTickets.filter((t: Ticket) => t.ownerAddress.toLowerCase() === ownerAddress.toLowerCase());
+        tickets = [...userLocalTickets];
+    }
+
     try {
+        // 2. Get from Firebase
         const q = query(collection(db, "tickets"), where("ownerAddress", "==", ownerAddress));
         const querySnapshot = await getDocs(q);
-        return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Ticket));
+        const firebaseTickets = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Ticket));
+
+        // Merge (prefer Firebase if ID collision, though unlikely with timestamps)
+        firebaseTickets.forEach(ft => {
+            if (!tickets.find(t => t.id === ft.id)) {
+                tickets.push(ft);
+            }
+        });
+
+        return tickets;
     } catch (error) {
         console.error("Error fetching tickets from Firebase:", error);
-        return [];
+        return tickets; // Return at least local tickets
     }
 };
 
 export const saveTicket = async (ticket: Ticket) => {
     try {
+        // Save to Local Storage first for instant update
+        if (typeof window !== 'undefined') {
+            const localTickets = JSON.parse(localStorage.getItem('local_tickets') || '[]');
+            localTickets.push(ticket);
+            localStorage.setItem('local_tickets', JSON.stringify(localTickets));
+
+            // Dispatch a custom event to notify listeners
+            window.dispatchEvent(new Event('ticketsUpdated'));
+        }
+
         await addDoc(collection(db, "tickets"), ticket);
         console.log("Ticket saved to Firebase:", ticket);
     } catch (error) {
@@ -149,7 +212,11 @@ export const initializeEvents = async (initialEvents: Event[]) => {
     try {
         // Check if events exist, if not, seed them
         const existingEvents = await getEvents();
-        if (existingEvents.length === 0) {
+        // Only seed if absolutely no events exist (which is rare now with mock data fallback, but useful for clean firebase)
+        // Actually, we probably don't need to aggressive seed if getEvents handles fallback well.
+        // Let's just check firebase specifically.
+        const querySnapshot = await getDocs(collection(db, "events"));
+        if (querySnapshot.empty) {
             console.log("Seeding initial events to Firebase...");
             for (const event of initialEvents) {
                 await saveEvent(event);
@@ -157,6 +224,5 @@ export const initializeEvents = async (initialEvents: Event[]) => {
         }
     } catch (error) {
         console.warn("Could not initialize events in Firebase, using local data:", error);
-        // Silently fail - the app will use mock data
     }
 };

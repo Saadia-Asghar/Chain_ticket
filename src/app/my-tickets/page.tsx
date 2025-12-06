@@ -1,36 +1,43 @@
 "use client";
-// ChainTicket+ - Secure Blockchain Ticketing Platform
-// Last updated: 2025-12-06 - Force deployment
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { QrCode, Calendar, MapPin, RefreshCw } from "lucide-react";
+import { QrCode, Calendar, MapPin, RefreshCw, Ticket as TicketIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useMockAccount } from "@/hooks/useMockAccount";
 import { WalletModal } from "@/components/WalletModal";
-import { getTickets } from "@/services/storage";
-
+import { getTickets, Ticket } from "@/services/storage";
+import Link from "next/link";
 
 export default function MyTicketsPage() {
     const { isConnected, address } = useMockAccount();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [tickets, setTickets] = useState<any[]>([]);
+    const [tickets, setTickets] = useState<Ticket[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    const fetchTickets = async () => {
+        if (isConnected && address) {
+            setLoading(true);
+            const userTickets = await getTickets(address);
+            setTickets(userTickets);
+            setLoading(false);
+        } else {
+            setTickets([]);
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        console.log('My Tickets - Connection State:', { isConnected, address });
-        const fetchTickets = async () => {
-            if (isConnected && address) {
-                console.log('Fetching tickets for address:', address);
-                const userTickets = await getTickets(address);
-                console.log('Fetched tickets:', userTickets);
-                setTickets(userTickets);
-            } else {
-                console.log('Not connected or no address - clearing tickets');
-                setTickets([]);
-            }
+        fetchTickets();
+
+        const handleTicketsUpdated = () => {
+            fetchTickets();
         };
 
-        fetchTickets();
+        window.addEventListener('ticketsUpdated', handleTicketsUpdated);
+
+        return () => {
+            window.removeEventListener('ticketsUpdated', handleTicketsUpdated);
+        };
     }, [isConnected, address]);
 
     const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
@@ -75,37 +82,54 @@ export default function MyTicketsPage() {
                 <p className="text-muted-foreground">Manage your tickets and view QR codes for entry.</p>
             </motion.div>
 
-            {tickets.length > 0 ? (
+            {loading ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {[1, 2, 3].map((i) => (
+                        <div key={i} className="h-[400px] rounded-3xl bg-secondary/20 animate-pulse border" />
+                    ))}
+                </div>
+            ) : tickets.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {tickets.map((ticket, index) => (
                         <TicketFlipCard key={ticket.id} ticket={ticket} index={index} />
                     ))}
                 </div>
             ) : (
-                <div className="text-center py-20">
-                    <p className="text-muted-foreground text-lg">No tickets found for {address?.slice(0, 6)}...{address?.slice(-4)}.</p>
-                    <Button className="mt-4" asChild>
-                        <a href="/events">Browse Events</a>
-                    </Button>
+                <div className="text-center py-20 bg-secondary/10 rounded-3xl border border-dashed">
+                    <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-background mb-6 shadow-sm">
+                        <TicketIcon className="w-10 h-10 text-muted-foreground/50" />
+                    </div>
+                    <h3 className="text-xl font-bold mb-2">No Tickets Yet</h3>
+                    <p className="text-muted-foreground max-w-sm mx-auto mb-6">
+                        You haven't purchased any tickets yet. Browse upcoming events to find your first experience!
+                    </p>
+                    <Link href="/events">
+                        <Button size="lg" className="rounded-xl">
+                            Browse Events
+                        </Button>
+                    </Link>
                 </div>
             )}
         </div>
     );
 }
 
-function TicketFlipCard({ ticket, index }: { ticket: any, index: number }) {
+function TicketFlipCard({ ticket, index }: { ticket: Ticket, index: number }) {
     const [isFlipped, setIsFlipped] = useState(false);
+
+    // Check if image is custom or tailwind class
+    const isCustomImage = ticket.eventImage?.startsWith('data:') || ticket.eventImage?.startsWith('http');
 
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: index * 0.1 }}
-            className="relative h-[400px] w-full perspective-1000 group cursor-pointer"
+            className="relative h-[450px] w-full perspective-1000 group cursor-pointer"
             onClick={() => setIsFlipped(!isFlipped)}
         >
             <motion.div
-                className="w-full h-full relative preserve-3d transition-all duration-500"
+                className="w-full h-full relative preserve-3d transition-all duration-700 ease-in-out"
                 animate={{ rotateY: isFlipped ? 180 : 0 }}
                 style={{ transformStyle: 'preserve-3d' }}
             >
@@ -114,33 +138,47 @@ function TicketFlipCard({ ticket, index }: { ticket: any, index: number }) {
                     className="absolute inset-0 backface-hidden"
                     style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
                 >
-                    <div className="h-full w-full bg-card border rounded-3xl overflow-hidden shadow-xl flex flex-col">
-                        <div className={`h-48 ${ticket.image} relative p-6 flex flex-col justify-between`}>
-                            <div className="bg-white/20 backdrop-blur-md self-start px-3 py-1 rounded-full text-white text-xs font-bold border border-white/20">
-                                Ticket #{ticket.id.padStart(3, '0')}
+                    <div className="h-full w-full bg-card border rounded-[2rem] overflow-hidden shadow-xl flex flex-col hover:shadow-2xl transition-shadow duration-300">
+                        <div className="relative h-56 w-full overflow-hidden">
+                            {isCustomImage ? (
+                                <img src={ticket.eventImage} alt={ticket.eventName} className="w-full h-full object-cover" />
+                            ) : (
+                                <div className={`w-full h-full ${ticket.eventImage} bg-cover bg-center`} />
+                            )}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+
+                            <div className="absolute top-4 left-4 bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-white text-xs font-bold border border-white/20">
+                                Ticket #{ticket.id.slice(-4).padStart(4, '0')}
                             </div>
-                            <h3 className="text-2xl font-bold text-white">{ticket.name}</h3>
                         </div>
 
-                        <div className="p-6 flex-grow flex flex-col justify-between">
-                            <div className="space-y-4">
-                                <div className="flex items-center text-muted-foreground">
-                                    <Calendar className="w-5 h-5 mr-3 text-primary" />
-                                    {ticket.date}
-                                </div>
-                                <div className="flex items-center text-muted-foreground">
-                                    <MapPin className="w-5 h-5 mr-3 text-primary" />
-                                    {ticket.location}
+                        <div className="p-6 flex-grow flex flex-col justify-between relative">
+                            {/* Cutout circles for ticket effect */}
+                            <div className="absolute -left-3 top-[-12px] w-6 h-6 rounded-full bg-background border-r border-border" />
+                            <div className="absolute -right-3 top-[-12px] w-6 h-6 rounded-full bg-background border-l border-border" />
+                            <div className="absolute top-[-1px] left-3 right-3 border-t-2 border-dashed border-muted-foreground/20" />
+
+                            <div>
+                                <h3 className="text-2xl font-bold mb-1 line-clamp-2 leading-tight">{ticket.eventName}</h3>
+                                <div className="space-y-3 mt-4">
+                                    <div className="flex items-center text-muted-foreground text-sm">
+                                        <Calendar className="w-4 h-4 mr-3 text-primary" />
+                                        <span className="truncate">{ticket.eventDate}</span>
+                                    </div>
+                                    <div className="flex items-center text-muted-foreground text-sm">
+                                        <MapPin className="w-4 h-4 mr-3 text-primary" />
+                                        <span className="truncate">{ticket.eventLocation}</span>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="flex items-center justify-between mt-6">
-                                <span className={`px-3 py-1 rounded-full text-sm font-medium ${ticket.status === 'Valid' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
+                            <div className="flex items-center justify-between mt-6 pt-4 border-t">
+                                <span className={`px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wider ${!ticket.isUsed ? 'bg-green-500/10 text-green-600' : 'bg-gray-100 text-gray-500'
                                     }`}>
-                                    {ticket.status}
+                                    {ticket.isUsed ? 'Used' : 'Valid Entry'}
                                 </span>
-                                <Button variant="ghost" className="text-primary hover:text-primary/80">
-                                    Tap to View QR <RefreshCw className="w-4 h-4 ml-2" />
+                                <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80 hover:bg-primary/10 -mr-2">
+                                    View QR Code <RefreshCw className="w-3 h-3 ml-2" />
                                 </Button>
                             </div>
                         </div>
@@ -149,24 +187,30 @@ function TicketFlipCard({ ticket, index }: { ticket: any, index: number }) {
 
                 {/* Back of Card */}
                 <div
-                    className="absolute inset-0 backface-hidden h-full w-full bg-card border rounded-3xl overflow-hidden shadow-xl flex flex-col items-center justify-center p-8"
+                    className="absolute inset-0 backface-hidden h-full w-full bg-card border rounded-[2rem] overflow-hidden shadow-xl flex flex-col items-center justify-center p-8 text-center"
                     style={{
                         transform: "rotateY(180deg)",
                         backfaceVisibility: 'hidden',
                         WebkitBackfaceVisibility: 'hidden'
                     }}
                 >
-                    <h3 className="text-xl font-bold mb-6">Scan for Entry</h3>
-                    <div className="bg-white p-4 rounded-xl shadow-inner mb-6">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={ticket.qrCode} alt="QR Code" className="w-48 h-48 object-contain" />
+                    <div className="absolute inset-0 bg-primary/5" />
+
+                    <div className="relative z-10 w-full flex flex-col items-center">
+                        <div className="bg-white p-4 rounded-2xl shadow-sm mb-6 max-w-[200px] mx-auto">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={ticket.qrData} alt="QR Code" className="w-full h-full object-contain" />
+                        </div>
+
+                        <h3 className="text-xl font-bold mb-2">{ticket.eventName}</h3>
+                        <p className="text-sm text-muted-foreground mb-6 max-w-xs mx-auto">
+                            Present this QR code at the entrance. Each code is unique and can only be used once.
+                        </p>
+
+                        <Button variant="outline" className="rounded-xl border-primary/20 text-primary hover:bg-primary/5 hover:text-primary">
+                            Flip Card Back
+                        </Button>
                     </div>
-                    <p className="text-sm text-muted-foreground text-center">
-                        Show this QR code to the gatekeeper at the venue entrance.
-                    </p>
-                    <Button variant="ghost" className="mt-4 text-primary">
-                        Tap to Flip Back
-                    </Button>
                 </div>
             </motion.div>
         </motion.div>
