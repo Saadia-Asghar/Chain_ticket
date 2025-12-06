@@ -284,39 +284,40 @@ export default function EventDetailsPage() {
                     </motion.div>
                 </div>
 
-                {/* Similar Events Section */}
-                <div className="container mx-auto px-4 pb-20">
-                    <h2 className="text-2xl font-bold mb-8">Similar Events You Might Like</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                        {EVENTS_DATA
-                            .filter(e => e.category === event.category && e.id !== event.id)
-                            .slice(0, 3)
-                            .map((similarEvent) => (
-                                <Link href={`/events/${similarEvent.id}`} key={similarEvent.id}>
-                                    <motion.div
-                                        whileHover={{ y: -5 }}
-                                        className="bg-card border rounded-2xl overflow-hidden hover:shadow-xl transition-all h-full flex flex-col"
-                                    >
-                                        <div className={`h-40 ${similarEvent.image} bg-cover bg-center`} />
-                                        <div className="p-5 flex flex-col flex-grow">
-                                            <h3 className="font-bold text-lg mb-2 line-clamp-1">{similarEvent.name}</h3>
-                                            <div className="space-y-2 text-sm text-muted-foreground mb-4 flex-grow">
-                                                <div className="flex items-center gap-2">
-                                                    <Calendar className="w-4 h-4" /> {similarEvent.date}
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <MapPin className="w-4 h-4" /> {similarEvent.city}, {similarEvent.country}
-                                                </div>
+            </div>
+
+            {/* Similar Events Section */}
+            <div className="container mx-auto px-4 pb-20">
+                <h2 className="text-2xl font-bold mb-8">Similar Events You Might Like</h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    {EVENTS_DATA
+                        .filter(e => e.category === event.category && e.id !== event.id)
+                        .slice(0, 3)
+                        .map((similarEvent) => (
+                            <Link href={`/events/${similarEvent.id}`} key={similarEvent.id}>
+                                <motion.div
+                                    whileHover={{ y: -5 }}
+                                    className="bg-card border rounded-2xl overflow-hidden hover:shadow-xl transition-all h-full flex flex-col"
+                                >
+                                    <div className={`h-40 ${similarEvent.image} bg-cover bg-center`} />
+                                    <div className="p-5 flex flex-col flex-grow">
+                                        <h3 className="font-bold text-lg mb-2 line-clamp-1">{similarEvent.name}</h3>
+                                        <div className="space-y-2 text-sm text-muted-foreground mb-4 flex-grow">
+                                            <div className="flex items-center gap-2">
+                                                <Calendar className="w-4 h-4" /> {similarEvent.date}
                                             </div>
-                                            <div className="pt-4 border-t flex justify-between items-center mt-auto">
-                                                <span className="font-bold text-primary">{similarEvent.price} ETH</span>
-                                                <span className="text-xs bg-secondary px-2 py-1 rounded">{similarEvent.category}</span>
+                                            <div className="flex items-center gap-2">
+                                                <MapPin className="w-4 h-4" /> {similarEvent.city}, {similarEvent.country}
                                             </div>
                                         </div>
-                                    </motion.div>
-                                </Link>
-                            ))}
-                    </div>
+                                        <div className="pt-4 border-t flex justify-between items-center mt-auto">
+                                            <span className="font-bold text-primary">{similarEvent.price} ETH</span>
+                                            <span className="text-xs bg-secondary px-2 py-1 rounded">{similarEvent.category}</span>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            </Link>
+                        ))}
                 </div>
             </div>
 

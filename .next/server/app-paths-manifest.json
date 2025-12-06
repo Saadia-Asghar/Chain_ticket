@@ -6,6 +6,8 @@
   "/events/[id]/page": "app/events/[id]/page.js",
   "/events/page": "app/events/page.js",
   "/my-tickets/page": "app/my-tickets/page.js",
+  "/organizer/page": "app/organizer/page.js",
   "/page": "app/page.js",
+  "/profile/page": "app/profile/page.js",
   "/verify/[tokenId]/page": "app/verify/[tokenId]/page.js"
 }

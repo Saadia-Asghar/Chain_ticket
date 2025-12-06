@@ -6,6 +6,7 @@ import { QrCode, Calendar, MapPin, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 import { EVENTS_DATA } from "@/data/mockData";
+import { useMockAccount } from "@/hooks/useMockAccount";
 
 const MY_TICKETS = [
     {
@@ -25,6 +26,28 @@ const MY_TICKETS = [
 ];
 
 export default function MyTicketsPage() {
+    const { isConnected } = useMockAccount();
+
+    if (!isConnected) {
+        return (
+            <div className="container mx-auto py-20 px-4 min-h-screen flex flex-col items-center justify-center text-center">
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="max-w-md space-y-6"
+                >
+                    <div className="w-24 h-24 bg-secondary/50 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <QrCode className="w-12 h-12 text-muted-foreground" />
+                    </div>
+                    <h1 className="text-3xl font-bold">Connect Wallet</h1>
+                    <p className="text-muted-foreground text-lg">
+                        Please connect your wallet to view your tickets and access your QR codes.
+                    </p>
+                </motion.div>
+            </div>
+        );
+    }
+
     return (
         <div className="container mx-auto py-12 px-4 min-h-screen">
             <motion.div
@@ -37,11 +60,20 @@ export default function MyTicketsPage() {
                 <p className="text-muted-foreground">Manage your tickets and view QR codes for entry.</p>
             </motion.div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {MY_TICKETS.map((ticket, index) => (
-                    <TicketFlipCard key={ticket.id} ticket={ticket} index={index} />
-                ))}
-            </div>
+            {MY_TICKETS.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {MY_TICKETS.map((ticket, index) => (
+                        <TicketFlipCard key={ticket.id} ticket={ticket} index={index} />
+                    ))}
+                </div>
+            ) : (
+                <div className="text-center py-20">
+                    <p className="text-muted-foreground text-lg">No tickets found.</p>
+                    <Button className="mt-4" asChild>
+                        <a href="/events">Browse Events</a>
+                    </Button>
+                </div>
+            )}
         </div>
     );
 }
