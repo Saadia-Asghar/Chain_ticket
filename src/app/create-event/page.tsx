@@ -99,7 +99,12 @@ export default function CreateEventPage() {
                 category: formData.category
             };
 
-            await saveEvent(newEvent);
+            // Save with timeout to prevent hanging
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error("Request timed out")), 10000)
+            );
+
+            await Promise.race([saveEvent(newEvent), timeoutPromise]);
             console.log("Event saved successfully:", newEvent);
 
             // Wait a moment for UX

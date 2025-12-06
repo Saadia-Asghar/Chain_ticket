@@ -102,7 +102,7 @@ export default function HelpCenterPage() {
                         title="Live Chat"
                         description="Chat with our support team"
                         action="Start Chat"
-                        link="#chat"
+                        link="/docs#contact"
                     />
                     <ContactCard
                         icon={<Phone className="w-8 h-8" />}
@@ -226,10 +226,12 @@ export default function HelpCenterPage() {
                             View Documentation
                         </Button>
                     </Link>
-                    <Button variant="outline" className="rounded-xl">
-                        <Mail className="w-4 h-4 mr-2" />
-                        Contact Support
-                    </Button>
+                    <Link href="/docs#contact">
+                        <Button variant="outline" className="rounded-xl">
+                            <Mail className="w-4 h-4 mr-2" />
+                            Contact Support
+                        </Button>
+                    </Link>
                 </div>
             </section>
         </div>
