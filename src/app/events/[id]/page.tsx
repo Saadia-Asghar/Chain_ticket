@@ -23,7 +23,11 @@ export default function EventDetailsPage() {
     const [event, setEvent] = useState<Event | null>(null);
     const [similarEvents, setSimilarEvents] = useState<Event[]>([]);
     const { isConnected, address } = useAccount();
-    // ... (rest of state)
+    const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
+    const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+    const [isCopied, setIsCopied] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchEventAndSimilar = async () => {
