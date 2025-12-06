@@ -2,17 +2,28 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { QrCode, Calendar, MapPin, RefreshCw, Ticket as TicketIcon } from "lucide-react";
+import { QrCode, Calendar, MapPin, RefreshCw, Ticket as TicketIcon, Send, ArrowRight, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useMockAccount } from "@/hooks/useMockAccount";
 import { WalletModal } from "@/components/WalletModal";
-import { getTickets, Ticket } from "@/services/storage";
+import { getTickets, updateTicket, Ticket } from "@/services/storage";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import Link from "next/link";
+import { toast } from "sonner"; // Assuming sonner or similar is used, or just alert/custom UI
 
 export default function MyTicketsPage() {
     const { isConnected, address } = useMockAccount();
     const [tickets, setTickets] = useState<Ticket[]>([]);
     const [loading, setLoading] = useState(true);
+    const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
+
+    // Transfer Modal State
+    const [transferModalOpen, setTransferModalOpen] = useState(false);
+    const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+    const [recipientAddress, setRecipientAddress] = useState("");
+    const [isTransferring, setIsTransferring] = useState(false);
 
     const fetchTickets = async () => {
         if (isConnected && address) {
@@ -40,7 +51,33 @@ export default function MyTicketsPage() {
         };
     }, [isConnected, address]);
 
-    const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
+    const handleTransferClick = (ticket: Ticket) => {
+        setSelectedTicket(ticket);
+        setTransferModalOpen(true);
+        setRecipientAddress("");
+    };
+
+    const handleConfirmTransfer = async () => {
+        if (!selectedTicket || !recipientAddress) return;
+
+        setIsTransferring(true);
+
+        try {
+            // Simulate blockchain delay
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            const updatedTicket = { ...selectedTicket, ownerAddress: recipientAddress };
+            await updateTicket(updatedTicket);
+
+            setTransferModalOpen(false);
+            // fetchTickets listener will auto-update UI (removing the ticket from list)
+        } catch (error) {
+            console.error("Transfer failed", error);
+            alert("Transfer failed. Please try again.");
+        } finally {
+            setIsTransferring(false);
+        }
+    };
 
     // Strictly enforce connection and address presence
     if (!isConnected || !address) {
@@ -79,7 +116,7 @@ export default function MyTicketsPage() {
                 className="mb-12 text-center"
             >
                 <h1 className="text-4xl font-bold mb-4">My Tickets</h1>
-                <p className="text-muted-foreground">Manage your tickets and view QR codes for entry.</p>
+                <p className="text-muted-foreground">Manage your tickets, transfer ownership, and view QR codes.</p>
             </motion.div>
 
             {loading ? (
@@ -91,7 +128,12 @@ export default function MyTicketsPage() {
             ) : tickets.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {tickets.map((ticket, index) => (
-                        <TicketFlipCard key={ticket.id} ticket={ticket} index={index} />
+                        <TicketFlipCard
+                            key={ticket.id}
+                            ticket={ticket}
+                            index={index}
+                            onTransfer={() => handleTransferClick(ticket)}
+                        />
                     ))}
                 </div>
             ) : (
@@ -110,14 +152,57 @@ export default function MyTicketsPage() {
                     </Link>
                 </div>
             )}
+
+            {/* Transfer Modal */}
+            <Dialog open={transferModalOpen} onOpenChange={setTransferModalOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Transfer Ticket</DialogTitle>
+                        <DialogDescription>
+                            Send your ticket to another wallet address. This action cannot be undone.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {selectedTicket && (
+                        <div className="py-4 space-y-4">
+                            <div className="flex items-center gap-4 p-4 bg-secondary/50 rounded-xl border">
+                                <div className="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center">
+                                    <TicketIcon className="w-6 h-6 text-primary" />
+                                </div>
+                                <div>
+                                    <h4 className="font-bold">{selectedTicket.eventName}</h4>
+                                    <p className="text-xs text-muted-foreground">ID: #{selectedTicket.id}</p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="recipient">Recipient Address (0x...)</Label>
+                                <Input
+                                    id="recipient"
+                                    placeholder="0x1234..."
+                                    value={recipientAddress}
+                                    onChange={(e) => setRecipientAddress(e.target.value)}
+                                />
+                            </div>
+                        </div>
+                    )}
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setTransferModalOpen(false)}>Cancel</Button>
+                        <Button onClick={handleConfirmTransfer} disabled={isTransferring || !recipientAddress.startsWith("0x")}>
+                            {isTransferring ? "Transferring..." : (
+                                <>Transfer Ticket <ArrowRight className="w-4 h-4 ml-2" /></>
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
 
-function TicketFlipCard({ ticket, index }: { ticket: Ticket, index: number }) {
+function TicketFlipCard({ ticket, index, onTransfer }: { ticket: Ticket, index: number, onTransfer: () => void }) {
     const [isFlipped, setIsFlipped] = useState(false);
-
-    // Check if image is custom or tailwind class
     const isCustomImage = ticket.eventImage?.startsWith('data:') || ticket.eventImage?.startsWith('http');
 
     return (
@@ -125,7 +210,7 @@ function TicketFlipCard({ ticket, index }: { ticket: Ticket, index: number }) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: index * 0.1 }}
-            className="relative h-[450px] w-full perspective-1000 group cursor-pointer"
+            className="relative h-[480px] w-full perspective-1000 group cursor-pointer"
             onClick={() => setIsFlipped(!isFlipped)}
         >
             <motion.div
@@ -139,21 +224,20 @@ function TicketFlipCard({ ticket, index }: { ticket: Ticket, index: number }) {
                     style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
                 >
                     <div className="h-full w-full bg-card border rounded-[2rem] overflow-hidden shadow-xl flex flex-col hover:shadow-2xl transition-shadow duration-300">
-                        <div className="relative h-56 w-full overflow-hidden">
+                        <div className="relative h-60 w-full overflow-hidden">
                             {isCustomImage ? (
                                 <img src={ticket.eventImage} alt={ticket.eventName} className="w-full h-full object-cover" />
                             ) : (
                                 <div className={`w-full h-full ${ticket.eventImage} bg-cover bg-center`} />
                             )}
                             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-
                             <div className="absolute top-4 left-4 bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-white text-xs font-bold border border-white/20">
                                 Ticket #{ticket.id.slice(-4).padStart(4, '0')}
                             </div>
                         </div>
 
                         <div className="p-6 flex-grow flex flex-col justify-between relative">
-                            {/* Cutout circles for ticket effect */}
+                            {/* Cutout circles */}
                             <div className="absolute -left-3 top-[-12px] w-6 h-6 rounded-full bg-background border-r border-border" />
                             <div className="absolute -right-3 top-[-12px] w-6 h-6 rounded-full bg-background border-l border-border" />
                             <div className="absolute top-[-1px] left-3 right-3 border-t-2 border-dashed border-muted-foreground/20" />
@@ -198,18 +282,37 @@ function TicketFlipCard({ ticket, index }: { ticket: Ticket, index: number }) {
 
                     <div className="relative z-10 w-full flex flex-col items-center">
                         <div className="bg-white p-4 rounded-2xl shadow-sm mb-6 max-w-[200px] mx-auto">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={ticket.qrData} alt="QR Code" className="w-full h-full object-contain" />
                         </div>
 
                         <h3 className="text-xl font-bold mb-2">{ticket.eventName}</h3>
-                        <p className="text-sm text-muted-foreground mb-6 max-w-xs mx-auto">
-                            Present this QR code at the entrance. Each code is unique and can only be used once.
+                        <p className="text-sm text-muted-foreground mb-4 max-w-xs mx-auto">
+                            Show this code at the gate.
                         </p>
 
-                        <Button variant="outline" className="rounded-xl border-primary/20 text-primary hover:bg-primary/5 hover:text-primary">
-                            Flip Card Back
-                        </Button>
+                        <div className="w-full grid grid-cols-2 gap-3 mt-2">
+                            <Button
+                                variant="outline"
+                                className="w-full"
+                                onClick={(e) => {
+                                    e.stopPropagation(); // Prevent card flip
+                                    setIsFlipped(false);
+                                }}
+                            >
+                                <RefreshCw className="w-4 h-4 mr-2" /> Flip Back
+                            </Button>
+
+                            <Button
+                                className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                                onClick={(e) => {
+                                    e.stopPropagation(); // Prevent card flip
+                                    onTransfer();
+                                }}
+                                disabled={ticket.isUsed}
+                            >
+                                <Send className="w-4 h-4 mr-2" /> Transfer
+                            </Button>
+                        </div>
                     </div>
                 </div>
             </motion.div>
