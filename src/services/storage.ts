@@ -63,10 +63,14 @@ export interface Ticket {
 
 export const getEvents = async (): Promise<Event[]> => {
     try {
+        // Check if we're in a browser environment
+        if (typeof window === 'undefined') {
+            return [];
+        }
         const querySnapshot = await getDocs(collection(db, "events"));
         return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Event));
     } catch (error) {
-        console.error("Error fetching events from Firebase:", error);
+        console.warn("Firebase not available, using fallback data:", error);
         return [];
     }
 };
@@ -133,12 +137,17 @@ export const saveTicket = async (ticket: Ticket) => {
 };
 
 export const initializeEvents = async (initialEvents: Event[]) => {
-    // Check if events exist, if not, seed them
-    const existingEvents = await getEvents();
-    if (existingEvents.length === 0) {
-        console.log("Seeding initial events to Firebase...");
-        for (const event of initialEvents) {
-            await saveEvent(event);
+    try {
+        // Check if events exist, if not, seed them
+        const existingEvents = await getEvents();
+        if (existingEvents.length === 0) {
+            console.log("Seeding initial events to Firebase...");
+            for (const event of initialEvents) {
+                await saveEvent(event);
+            }
         }
+    } catch (error) {
+        console.warn("Could not initialize events in Firebase, using local data:", error);
+        // Silently fail - the app will use mock data
     }
 };
