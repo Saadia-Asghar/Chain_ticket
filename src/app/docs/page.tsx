@@ -238,15 +238,21 @@ export default function DocumentationPage() {
 
 function ContactForm() {
     const [status, setStatus] = useState<"idle" | "submitting" | "success">("idle");
+    const [name, setName] = useState("");
+    const [email, setEmail] = useState("");
+    const [message, setMessage] = useState("");
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         setStatus("submitting");
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        // Construct mailto link
+        const subject = encodeURIComponent(`Support Request from ${name || 'User'}`);
+        const body = encodeURIComponent(`Name: ${name}\nEmail: ${email}\n\nMessage:\n${message}`);
+        window.location.href = `mailto:support@chainticket.plus?subject=${subject}&body=${body}`;
+
         setStatus("success");
-        // Reset after 3 seconds
-        setTimeout(() => setStatus("idle"), 3000);
+        setTimeout(() => setStatus("idle"), 5000);
     };
 
     if (status === "success") {
@@ -255,8 +261,8 @@ function ContactForm() {
                 <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center text-green-600 mb-2">
                     <Check className="w-8 h-8" />
                 </div>
-                <h3 className="text-xl font-bold">Message Sent!</h3>
-                <p className="text-muted-foreground">We'll get back to you shortly.</p>
+                <h3 className="text-xl font-bold">Email Client Opened!</h3>
+                <p className="text-muted-foreground">Please send the email from your mail client to complete the request.</p>
                 <Button variant="outline" onClick={() => setStatus("idle")}>Send another</Button>
             </div>
         );
@@ -266,16 +272,40 @@ function ContactForm() {
         <form onSubmit={handleSubmit} className="space-y-4">
             <h3 className="text-lg font-bold">Send a Message</h3>
             <div className="space-y-2">
+                <Label htmlFor="name">Name</Label>
+                <Input
+                    id="name"
+                    placeholder="Your Name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                />
+            </div>
+            <div className="space-y-2">
                 <Label htmlFor="email">Your Email</Label>
-                <Input id="email" type="email" placeholder="john@example.com" required />
+                <Input
+                    id="email"
+                    type="email"
+                    placeholder="john@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                />
             </div>
             <div className="space-y-2">
                 <Label htmlFor="question">Question / Feedback</Label>
-                <Textarea id="question" placeholder="How can we improve?" rows={4} required />
+                <Textarea
+                    id="question"
+                    placeholder="How can we improve?"
+                    rows={4}
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    required
+                />
             </div>
             <Button type="submit" className="w-full" disabled={status === "submitting"}>
                 {status === "submitting" ? (
-                    "Sending..."
+                    "Opening Mail..."
                 ) : (
                     <>Send to Support Team <Send className="w-4 h-4 ml-2" /></>
                 )}

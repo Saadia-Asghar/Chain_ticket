@@ -3,13 +3,18 @@
 import { useEffect, useState } from "react";
 import { useReadContract, useWriteContract } from "wagmi";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useParams } from "next/navigation";
 import { motion } from "framer-motion";
-import { CheckCircle2, XCircle, AlertCircle, QrCode, Shield, Info, Loader2 } from "lucide-react";
+import { CheckCircle2, XCircle, AlertCircle, QrCode, Shield, Info, Loader2, Lock } from "lucide-react";
 import Link from "next/link";
 
 import { CONTRACT_ADDRESS } from "@/utils/contract";
 import { getTicketById, updateTicket, Ticket } from "@/services/storage";
+
+// Demo Gatekeeper PIN
+const GATEKEEPER_PIN = "1234";
 
 const ChainTicketPlusABI = [
     {
@@ -35,12 +40,11 @@ const ChainTicketPlusABI = [
     }
 ] as const;
 
-
 export default function VerifyPage() {
     const params = useParams();
     const tokenIdStr = params.tokenId as string;
 
-    // Fallback: Safe BigInt conversion if it's a number, otherwise null (mock IDs might be non-numeric strings? No, date.now is numeric string)
+    // Fallback: Safe BigInt conversion
     let tokenId: bigint | undefined;
     try {
         tokenId = BigInt(tokenIdStr);
@@ -48,10 +52,15 @@ export default function VerifyPage() {
         console.warn("Invalid token ID format for contract:", tokenIdStr);
     }
 
-    // State for local/firebase ticket
+    // State
     const [storedTicket, setStoredTicket] = useState<Ticket | null>(null);
     const [loadingStored, setLoadingStored] = useState(true);
     const [manualVerificationSuccess, setManualVerificationSuccess] = useState(false);
+
+    // Security State
+    const [enteredPin, setEnteredPin] = useState("");
+    const [pinError, setPinError] = useState(false);
+    const [showPinInput, setShowPinInput] = useState(false);
 
     // Fetch from Storage
     useEffect(() => {
@@ -85,7 +94,22 @@ export default function VerifyPage() {
     const { writeContract, isPending, isSuccess, isError } = useWriteContract();
 
     // Verification Logic
-    const handleValidate = async () => {
+    const handleValidateClick = () => {
+        if (!showPinInput) {
+            setShowPinInput(true);
+            return;
+        }
+
+        if (enteredPin !== GATEKEEPER_PIN) {
+            setPinError(true);
+            return;
+        }
+
+        setPinError(false);
+        performValidation();
+    };
+
+    const performValidation = async () => {
         // 1. Try Blockchain Validation
         if (tokenId && ownerOnChain) {
             try {
@@ -114,17 +138,12 @@ export default function VerifyPage() {
                 refetchUsed();
                 // Refetch local
                 getTicketById(tokenIdStr).then(t => t && setStoredTicket(t));
+                setShowPinInput(false);
             }, 2000);
         }
     }, [isSuccess, manualVerificationSuccess, refetchUsed, tokenIdStr]);
 
     const isLoading = loadingStored && (isLoadingUsed || isLoadingOwner);
-
-    // Determination Logic:
-    // If found in Storage, use Storage.
-    // Else use Blockchain.
-    // If both, prefer Storage for 'details' but Blockchain for 'validity' if available.
-    // Actually, simplifying: Use Storage if available (since our Mint flow uses Storage primarily).
 
     let isValid = false;
     let isUsed = false;
@@ -156,7 +175,7 @@ export default function VerifyPage() {
                 </div>
                 <h1 className="text-4xl font-bold mb-4">Ticket Verification</h1>
                 <p className="text-muted-foreground text-lg">
-                    Real-time ticket authenticity check
+                    Secure Gatekeeper Panel
                 </p>
                 <div className="mt-2 text-xs text-muted-foreground font-mono bg-secondary/30 inline-block px-2 py-1 rounded">
                     ID: {tokenIdStr}
@@ -196,8 +215,8 @@ export default function VerifyPage() {
                                     </h2>
                                     <p className="text-muted-foreground mb-8 text-lg">
                                         {isUsed
-                                            ? "This ticket has already been scanned and verified."
-                                            : "This ticket is authentic. You may approve entry."}
+                                            ? "This ticket has already been scanned and cannot be reused."
+                                            : "This ticket is authentic. Gatekeeper authorization required to approve entry."}
                                     </p>
 
                                     {/* Ticket Details */}
@@ -234,13 +253,40 @@ export default function VerifyPage() {
                                         </div>
                                     </div>
 
-                                    {/* Action Button */}
+                                    {/* Action Button & Security */}
                                     {!isUsed && (
                                         <div className="space-y-4 max-w-md mx-auto">
+                                            {showPinInput && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, height: 0 }}
+                                                    animate={{ opacity: 1, height: 'auto' }}
+                                                    className="bg-card border rounded-xl p-4 mb-4"
+                                                >
+                                                    <div className="space-y-2 text-left">
+                                                        <Label htmlFor="pin" className="text-sm font-semibold flex items-center gap-2">
+                                                            <Lock className="w-4 h-4" /> Gatekeeper PIN
+                                                        </Label>
+                                                        <Input
+                                                            id="pin"
+                                                            type="password"
+                                                            placeholder="Enter access code (1234)"
+                                                            value={enteredPin}
+                                                            onChange={(e) => setEnteredPin(e.target.value)}
+                                                            className={pinError ? "border-red-500" : ""}
+                                                            autoFocus
+                                                        />
+                                                        {pinError && <p className="text-xs text-red-500">Incorrect PIN code.</p>}
+                                                    </div>
+                                                </motion.div>
+                                            )}
+
                                             <Button
                                                 size="lg"
-                                                className="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl h-16 text-xl font-bold shadow-lg shadow-green-600/20 hover:shadow-green-600/40 transition-all hover:-translate-y-1"
-                                                onClick={handleValidate}
+                                                className={`w-full text-white rounded-xl h-16 text-xl font-bold transition-all ${showPinInput
+                                                        ? "bg-primary hover:bg-primary/90"
+                                                        : "bg-green-600 hover:bg-green-700 shadow-lg shadow-green-600/20 hover:shadow-green-600/40 hover:-translate-y-1"
+                                                    }`}
+                                                onClick={handleValidateClick}
                                                 disabled={isPending || isSuccess || manualVerificationSuccess}
                                             >
                                                 {isPending ? (
@@ -253,6 +299,8 @@ export default function VerifyPage() {
                                                         <CheckCircle2 className="w-6 h-6 mr-2" />
                                                         Approved!
                                                     </>
+                                                ) : showPinInput ? (
+                                                    "Confirm Entry"
                                                 ) : (
                                                     <>
                                                         <Shield className="w-6 h-6 mr-2" />
@@ -305,21 +353,21 @@ export default function VerifyPage() {
                             {/* Connector Line (Desktop) */}
                             <div className="hidden md:block absolute top-[28px] left-[16%] right-[16%] h-0.5 bg-border -z-10" />
 
-                            <VerificationStep
-                                number="1"
-                                title="Scan QR Code"
-                                description="Gatekeeper scans the visitor's unique ticket QR"
-                            />
-                            <VerificationStep
-                                number="2"
-                                title="Instant Lookup"
-                                description="System retrieves ticket data from blockchain & database"
-                            />
-                            <VerificationStep
-                                number="3"
-                                title="Entry Approval"
-                                description="Operator marks ticket as 'Used' to prevent re-entry"
-                            />
+                            <div className="text-center bg-card md:bg-transparent p-4 md:p-0 rounded-2xl border md:border-0 relative">
+                                <div className="w-14 h-14 rounded-full bg-background border-2 border-primary/20 flex items-center justify-center text-primary font-bold text-xl mx-auto mb-4 shadow-sm z-10 relative">1</div>
+                                <h4 className="font-bold text-lg mb-2">Scan QR Code</h4>
+                                <p className="text-sm text-muted-foreground leading-relaxed">System validates ticket authenticity</p>
+                            </div>
+                            <div className="text-center bg-card md:bg-transparent p-4 md:p-0 rounded-2xl border md:border-0 relative">
+                                <div className="w-14 h-14 rounded-full bg-background border-2 border-primary/20 flex items-center justify-center text-primary font-bold text-xl mx-auto mb-4 shadow-sm z-10 relative">2</div>
+                                <h4 className="font-bold text-lg mb-2">Check Details</h4>
+                                <p className="text-sm text-muted-foreground leading-relaxed">Verify visitor identity matches ticket</p>
+                            </div>
+                            <div className="text-center bg-card md:bg-transparent p-4 md:p-0 rounded-2xl border md:border-0 relative">
+                                <div className="w-14 h-14 rounded-full bg-background border-2 border-primary/20 flex items-center justify-center text-primary font-bold text-xl mx-auto mb-4 shadow-sm z-10 relative">3</div>
+                                <h4 className="font-bold text-lg mb-2">Secure Entry</h4>
+                                <p className="text-sm text-muted-foreground leading-relaxed">Enter PIN to approve and burn ticket</p>
+                            </div>
                         </div>
                     </div>
 
@@ -333,18 +381,6 @@ export default function VerifyPage() {
                     </div>
                 </div>
             )}
-        </div>
-    );
-}
-
-function VerificationStep({ number, title, description }: { number: string; title: string; description: string }) {
-    return (
-        <div className="text-center bg-card md:bg-transparent p-4 md:p-0 rounded-2xl border md:border-0 relative">
-            <div className="w-14 h-14 rounded-full bg-background border-2 border-primary/20 flex items-center justify-center text-primary font-bold text-xl mx-auto mb-4 shadow-sm z-10 relative">
-                {number}
-            </div>
-            <h4 className="font-bold text-lg mb-2">{title}</h4>
-            <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
         </div>
     );
 }
