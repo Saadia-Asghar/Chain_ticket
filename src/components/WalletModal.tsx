@@ -26,10 +26,26 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
     }, []);
 
     const uniqueConnectors = connectors.filter((c) => {
-        // Filter out injected connector if no provider is found to prevent errors
-        if (c.id === 'injected' && typeof window !== 'undefined' && !(window as any).ethereum) {
-            return false;
+        // Filter out Safe connector if not in Safe context (iframe)
+        // Safe Apps always run in an iframe. If we are in the main window, we are not in a Safe App.
+        if (c.id === 'safe') {
+            if (typeof window !== 'undefined' && window.parent === window) {
+                return false;
+            }
         }
+
+        // Filter out injected connector if:
+        // 1. No provider is found (prevent errors)
+        // 2. MetaMask connector is available (prevent duplicates, as MetaMask is also 'injected')
+        if (c.id === 'injected') {
+            if (typeof window !== 'undefined' && !(window as any).ethereum) {
+                return false;
+            }
+            if (connectors.some(other => other.id === 'metaMask')) {
+                return false;
+            }
+        }
+
         return true;
     }).filter((c, index, self) =>
         index === self.findIndex((t) => t.id === c.id)
