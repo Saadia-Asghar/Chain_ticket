@@ -15,7 +15,7 @@ import { WalletModal } from "@/components/WalletModal";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 // Mock Data Store - In a real app, this would be an API call
-import { saveTicket, getEventById, getEvents, Event } from "@/services/storage";
+import { saveTicket, getEventById, getEvents, Event, DEMO_ADDRESS } from "@/services/storage";
 
 export default function EventDetailsPage() {
     const params = useParams();
@@ -28,6 +28,7 @@ export default function EventDetailsPage() {
     const [isCopied, setIsCopied] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
+    const [isDemoMinting, setIsDemoMinting] = useState(false);
 
     useEffect(() => {
         const fetchEventAndSimilar = async () => {
@@ -71,6 +72,40 @@ export default function EventDetailsPage() {
         setSuccessMessage(null);
         reset();
 
+        // DEMO USER BYPASS
+        if (address && DEMO_ADDRESS && address.toLowerCase() === DEMO_ADDRESS.toLowerCase()) {
+            setIsDemoMinting(true);
+            try {
+                // Simulate transaction delay
+                await new Promise(resolve => setTimeout(resolve, 2000));
+
+                const ticketId = Date.now().toString();
+                const baseUrl = window.location.origin;
+                const verifyUrl = `${baseUrl}/verify/${ticketId}`;
+                const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(verifyUrl)}`;
+
+                await saveTicket({
+                    id: ticketId,
+                    eventId: event.id,
+                    eventName: event.name,
+                    eventDate: event.date,
+                    eventLocation: event.location,
+                    eventImage: event.image,
+                    qrData: qrCodeUrl,
+                    ownerAddress: address,
+                    isUsed: false
+                });
+
+                setSuccessMessage("Demo Ticket minted successfully!");
+            } catch (err) {
+                console.error("Demo Mint Failed", err);
+                setError("Demo Mint Failed");
+            } finally {
+                setIsDemoMinting(false);
+            }
+            return;
+        }
+
         try {
             writeContract({
                 address: CONTRACT_ADDRESS,
@@ -99,7 +134,7 @@ export default function EventDetailsPage() {
         setIsShareModalOpen(true);
     };
 
-    // Save ticket when transaction is confirmed
+    // Save ticket when transaction is confirmed (REAL USER)
     useEffect(() => {
         const saveTicketToFirebase = async () => {
             if (isConfirmed && hash && event && address) {
@@ -307,7 +342,7 @@ export default function EventDetailsPage() {
                             <Button
                                 className="w-full h-14 text-lg font-bold mb-6 rounded-xl shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all"
                                 onClick={handleMint}
-                                disabled={isPending || isConfirming || !isConnected}
+                                disabled={isPending || isConfirming || !isConnected || isDemoMinting}
                             >
                                 {isPending ? (
                                     <div className="flex items-center gap-2">
@@ -318,6 +353,11 @@ export default function EventDetailsPage() {
                                     <div className="flex items-center gap-2">
                                         <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                                         Minting...
+                                    </div>
+                                ) : isDemoMinting ? (
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                        Processing Demo...
                                     </div>
                                 ) : !isConnected ? (
                                     "Connect Wallet to Mint"
