@@ -17,9 +17,16 @@ export default function EventsPage() {
 
     useEffect(() => {
         const loadEvents = async () => {
-            await initializeEvents(EVENTS_DATA);
-            const fetchedEvents = await getEvents();
-            setEvents(fetchedEvents);
+            try {
+                await initializeEvents(EVENTS_DATA);
+                const fetchedEvents = await getEvents();
+                // Use fetched events if available, otherwise fallback to mock data
+                setEvents(fetchedEvents.length > 0 ? fetchedEvents : EVENTS_DATA);
+            } catch (error) {
+                console.error("Error loading events from Firebase, using mock data:", error);
+                // Fallback to mock data if Firebase fails
+                setEvents(EVENTS_DATA);
+            }
         };
         loadEvents();
     }, []);
