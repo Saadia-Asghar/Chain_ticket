@@ -11,7 +11,7 @@ import { WalletModal } from "@/components/WalletModal";
 import { getTickets, updateTicket, Ticket } from "@/services/storage";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import Link from "next/link";
-import { toast } from "sonner"; // Assuming sonner or similar is used, or just alert/custom UI
+
 
 export default function MyTicketsPage() {
     const { isConnected, address } = useMockAccount();
