@@ -36,54 +36,49 @@ export interface Ticket {
 
 export async function getEvents(): Promise<Event[]> {
     try {
-        // Start with Mock Data
-        // Patch Mock Data to assign events to Demo User
-        const allEvents = JSON.parse(JSON.stringify(EVENTS_DATA)); // Deep copy to avoid mutation issues
+        // Start with Mock Data and patch for Demo User
+        const allEvents = JSON.parse(JSON.stringify(EVENTS_DATA));
         allEvents[0].organizerAddress = DEMO_ADDRESS;
         allEvents[1].organizerAddress = DEMO_ADDRESS;
 
-        // Check if we're in a browser environment
         if (typeof window === 'undefined') {
             return allEvents;
         }
 
-        // Fetch from Firebase
-        const querySnapshot = await getDocs(collection(db, "events"));
-        const firebaseEvents = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Event));
-
-        // Get local events
         const localEvents = JSON.parse(localStorage.getItem('local_events') || '[]');
 
-        // Merge Firebase Events (override mock if same ID)
-        firebaseEvents.forEach(fbEvent => {
-            const index = allEvents.findIndex((e: Event) => e.id === fbEvent.id);
-            if (index !== -1) {
-                allEvents[index] = fbEvent;
-            } else {
-                allEvents.push(fbEvent);
-            }
-        });
+        // Non-blocking Firebase Fetch (wait max 3s, else return local/mock)
+        // Actually for READS we usually wait, but if "Creating" failed due to write hang, reads might be slow too.
+        // We'll keep await here usually, but wrap in try/catch to use fallback.
+        try {
+            // We can use a timeout for this too if needed, but usually reads are faster.
+            // For now, let's trust the try/catch around it.
+            const querySnapshot = await getDocs(collection(db, "events"));
+            const firebaseEvents = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Event));
 
-        // Merge Local Storage Events (override all if same ID)
+            firebaseEvents.forEach(fbEvent => {
+                const index = allEvents.findIndex((e: Event) => e.id === fbEvent.id);
+                if (index !== -1) allEvents[index] = fbEvent;
+                else allEvents.push(fbEvent);
+            });
+        } catch (fbError) {
+            console.warn("Firebase Read Error/Timeout, using fallback", fbError);
+        }
+
         localEvents.forEach((localEvent: Event) => {
             const index = allEvents.findIndex((e: Event) => e.id === localEvent.id);
-            if (index !== -1) {
-                allEvents[index] = localEvent;
-            } else {
-                allEvents.push(localEvent);
-            }
+            if (index !== -1) allEvents[index] = localEvent;
+            else allEvents.push(localEvent);
         });
 
-        // Filter duplicates strictly
         return allEvents.filter((v: Event, i: number, a: Event[]) => a.findIndex(t => (t.id === v.id)) === i);
 
     } catch (error) {
-        console.warn("Using fallback data (Firebase error):", error);
-        // Fallback with patched mock data
+        console.warn("General Error in getEvents:", error);
+        // Fallback
         const patchedEvents = JSON.parse(JSON.stringify(EVENTS_DATA));
         patchedEvents[0].organizerAddress = DEMO_ADDRESS;
         patchedEvents[1].organizerAddress = DEMO_ADDRESS;
-
         if (typeof window !== 'undefined') {
             const localEvents = JSON.parse(localStorage.getItem('local_events') || '[]');
             localEvents.forEach((localEvent: Event) => {
@@ -91,14 +86,12 @@ export async function getEvents(): Promise<Event[]> {
                 if (index !== -1) patchedEvents[index] = localEvent;
                 else patchedEvents.push(localEvent);
             });
-            return patchedEvents;
         }
         return patchedEvents;
     }
 }
 
 export async function getEventById(id: string): Promise<Event | undefined> {
-    // 0. Check Mock Data FIRST
     const mockEvents = JSON.parse(JSON.stringify(EVENTS_DATA));
     mockEvents[0].organizerAddress = DEMO_ADDRESS;
     mockEvents[1].organizerAddress = DEMO_ADDRESS;
@@ -106,7 +99,6 @@ export async function getEventById(id: string): Promise<Event | undefined> {
     const mockEvent = mockEvents.find((e: Event) => e.id === id);
     if (mockEvent) return mockEvent;
 
-    // 1. Check Local Storage
     if (typeof window !== 'undefined') {
         const localEvents = JSON.parse(localStorage.getItem('local_events') || '[]');
         const localEvent = localEvents.find((e: Event) => e.id === id);
@@ -114,7 +106,6 @@ export async function getEventById(id: string): Promise<Event | undefined> {
     }
 
     try {
-        // 2. Check Firebase
         const docRef = doc(db, "events", id);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
@@ -137,10 +128,11 @@ export async function saveEvent(event: Event) {
             window.dispatchEvent(new Event('eventsUpdated'));
         }
 
+        // Non-blocking Firebase Write
         if (event.id) {
-            await setDoc(doc(db, "events", event.id), event);
+            setDoc(doc(db, "events", event.id), event).catch(e => console.error("BG Firebase Save Error:", e));
         } else {
-            await addDoc(collection(db, "events"), event);
+            addDoc(collection(db, "events"), event).catch(e => console.error("BG Firebase Save Error:", e));
         }
     } catch (error) {
         console.error("Error saving event:", error);
@@ -160,7 +152,7 @@ export async function updateEvent(updatedEvent: Event) {
         }
 
         const eventRef = doc(db, "events", updatedEvent.id);
-        await updateDoc(eventRef, { ...updatedEvent });
+        updateDoc(eventRef, { ...updatedEvent }).catch(e => console.error("BG Firebase Update Error:", e));
     } catch (error) {
         console.error("Error updating event:", error);
     }
@@ -169,9 +161,7 @@ export async function updateEvent(updatedEvent: Event) {
 export async function getTickets(ownerAddress?: string): Promise<Ticket[]> {
     if (!ownerAddress) return [];
 
-    // DEMO USER TICKETS
     if (ownerAddress === DEMO_ADDRESS) {
-        // Return 3 mock tickets
         const events = EVENTS_DATA.slice(0, 3);
         const demoTickets = events.map((event, i) => ({
             id: `demo-ticket-${i + 1}`,
@@ -182,36 +172,16 @@ export async function getTickets(ownerAddress?: string): Promise<Ticket[]> {
             eventImage: event.image,
             qrData: `CTP-${event.id}-demo-${i + 1}`,
             ownerAddress: DEMO_ADDRESS,
-            isUsed: i === 1 // Make 2nd ticket 'Used' for testing
+            isUsed: i === 1
         }));
 
-        // Merge with any local modifications for Demo User (e.g. transfers)
         if (typeof window !== 'undefined') {
-            const localTickets = JSON.parse(localStorage.getItem('local_tickets') || '[]');
-            // If local storage has tickets, prioritize them or merge?
-            // Simple logic: if specific ticket ID exists locally, use it (it might be transferred out)
-            // But if transferred OUT, it won't be in 'localTickets' filtered by owner.
-
-            // Actually, let's just use local tickets if they exist, else return default demo tickets.
-            // But wait, if I transfer a ticket away, I want it GONE.
-            // If I haven't touched them, I want them there.
-
-            // Allow "Mock" tickets to be "virtual".
-            // If I transfer a mock ticket, I should save the "new state" in local storage.
-            // Complex. For now, Demo Tickets are returned STATICALLY unless we implement intricate "Mock State".
-            // Let's keep it simple: Demo Tickets are always there for testing, unless overridden locally?
-
-            // To support transfer: checking if this ticket ID is in `local_tickets` with DIFFERENT owner?
-            // This is getting complicated for a simple demo. 
-            // I'll just return static tickets. Transfers might "look" like they work but on refresh they might come back if I don't persist them locally.
-            // I'll persist them locally on first load?
-
-            // Better:
             const storedDemoTickets = localStorage.getItem('demo_tickets_initialized');
             if (!storedDemoTickets) {
-                // Initialize demo tickets in local storage
                 const currentLocal = JSON.parse(localStorage.getItem('local_tickets') || '[]');
-                const newLocal = [...currentLocal, ...demoTickets];
+                // Check if demo tickets are already in local (to avoid dupes on re-init)
+                const newDemo = demoTickets.filter(dt => !currentLocal.find((ct: Ticket) => ct.id === dt.id));
+                const newLocal = [...currentLocal, ...newDemo];
                 localStorage.setItem('local_tickets', JSON.stringify(newLocal));
                 localStorage.setItem('demo_tickets_initialized', 'true');
                 return demoTickets;
@@ -229,6 +199,7 @@ export async function getTickets(ownerAddress?: string): Promise<Ticket[]> {
 
     try {
         const q = query(collection(db, "tickets"), where("ownerAddress", "==", ownerAddress));
+        // We await read here, as we need to show tickets. If it hangs, the UI loader spins.
         const querySnapshot = await getDocs(q);
         const firebaseTickets = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Ticket));
 
@@ -273,20 +244,21 @@ export async function updateTicket(updatedTicket: Ticket) {
             if (index !== -1) {
                 localTickets[index] = updatedTicket;
             } else {
-                // If not found (maybe it was a virtual mock ticket being updated/transferred), add it
                 localTickets.push(updatedTicket);
             }
             localStorage.setItem('local_tickets', JSON.stringify(localTickets));
             window.dispatchEvent(new Event('ticketsUpdated'));
         }
 
-        // Find doc in Firebase
+        // Non-blocking Firebase update
         const q = query(collection(db, "tickets"), where("id", "==", updatedTicket.id));
-        const querySnapshot = await getDocs(q);
-        if (!querySnapshot.empty) {
-            const docRef = querySnapshot.docs[0].ref;
-            await updateDoc(docRef, { ...updatedTicket });
-        }
+        getDocs(q).then(snapshot => {
+            if (!snapshot.empty) {
+                const docRef = snapshot.docs[0].ref;
+                updateDoc(docRef, { ...updatedTicket });
+            }
+        }).catch(e => console.error("BG Ticket Update Error:", e));
+
     } catch (error) {
         console.error("Error updating ticket:", error);
     }
@@ -301,7 +273,7 @@ export async function saveTicket(ticket: Ticket) {
             window.dispatchEvent(new Event('ticketsUpdated'));
         }
 
-        await addDoc(collection(db, "tickets"), ticket);
+        addDoc(collection(db, "tickets"), ticket).catch(e => console.error("BG Ticket Save Error:", e));
     } catch (error) {
         console.error("Error saving ticket:", error);
     }
@@ -313,7 +285,7 @@ export async function initializeEvents(initialEvents: Event[]) {
         if (querySnapshot.empty) {
             console.log("Seeding initial events...");
             for (const event of initialEvents) {
-                await saveEvent(event);
+                saveEvent(event); // uses non-blocking firebase write now
             }
         }
     } catch (error) {
