@@ -205,6 +205,11 @@ function TicketFlipCard({ ticket, index, onTransfer }: { ticket: Ticket, index: 
     const [isFlipped, setIsFlipped] = useState(false);
     const isCustomImage = ticket.eventImage?.startsWith('data:') || ticket.eventImage?.startsWith('http');
 
+    // FIX QR CODE: If it's a raw code (not a URL), converting it to a QR Server URL
+    const qrSrc = ticket.qrData?.startsWith('http')
+        ? ticket.qrData
+        : `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(ticket.qrData)}`;
+
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -282,7 +287,7 @@ function TicketFlipCard({ ticket, index, onTransfer }: { ticket: Ticket, index: 
 
                     <div className="relative z-10 w-full flex flex-col items-center">
                         <div className="bg-white p-4 rounded-2xl shadow-sm mb-6 max-w-[200px] mx-auto">
-                            <img src={ticket.qrData} alt="QR Code" className="w-full h-full object-contain" />
+                            <img src={qrSrc} alt="QR Code" className="w-full h-full object-contain" />
                         </div>
 
                         <h3 className="text-xl font-bold mb-2">{ticket.eventName}</h3>
